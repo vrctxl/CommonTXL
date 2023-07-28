@@ -1,6 +1,11 @@
 {
   "name": "com.texelsaur.common",
   "displayName": "TXL - CommonTXL",
+  "author": {
+  	"name": "Texelsaur",
+  	"email": "",
+  	"url": "https://texelsaurus.com"
+  },
   "version": "1.0.0",
   "description": "Common components and base classes for TXL projects",
   "gitDependencies": {},
