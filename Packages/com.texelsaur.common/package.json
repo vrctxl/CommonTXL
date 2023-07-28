@@ -20,7 +20,6 @@
   	"Assets\\Texel\\Editor\\Common\\EditorTools.cs": "bf2c707af7283de498e934204c342c06",
   	"Assets\\Texel\\Video\\Textures\\UI\\ui_atlas.png": "a1d53f153b56ac4ca4eaa6ba39a8ee4"
   },
-  "localPath": "D:\\Unity\\Worlds\\VideoTXL-Migrated-2\\Packages\\com.texelsaur.common",
   "dependencies": {
     "com.vrchat.udonsharp": ""
   }
