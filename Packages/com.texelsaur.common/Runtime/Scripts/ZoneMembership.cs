@@ -120,6 +120,16 @@ namespace Texel
             _RemovePlayer(playerEventArg);
         }
 
+        public int _AddLocalPlayer()
+        {
+            return _AddPlayer(Networking.LocalPlayer);
+        }
+
+        public bool _RemoveLocalPlayer()
+        {
+            return _RemovePlayer(Networking.LocalPlayer);
+        }
+
         public int _AddPlayer(VRCPlayerApi player)
         {
             if (!Utilities.IsValid(player))
