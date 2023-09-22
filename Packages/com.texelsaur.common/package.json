@@ -6,12 +6,10 @@
     "email": "",
     "url": "https://texelsaurus.com"
   },
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Common components and base classes for TXL projects",
   "gitDependencies": {},
-  "vpmDependencies": {
-    "com.vrchat.udonsharp": "^1.1.8"
-  },
+  "vpmDependencies": {},
   "legacyFolders": {
     "Assets\\Texel\\Common": "4b7c604a04100044fa7a6bc20b864417",
     "Assets\\Texel\\Editor\\Common\\Zone": "02b21299875c99746bb1cb275d975b0f"
@@ -20,7 +18,5 @@
     "Assets\\Texel\\Editor\\Common\\EditorTools.cs": "bf2c707af7283de498e934204c342c06",
     "Assets\\Texel\\Video\\Textures\\UI\\ui_atlas.png": "a1d53f153b56ac4ca4eaa6ba39a8ee4"
   },
-  "dependencies": {
-    "com.vrchat.udonsharp": ""
-  }
+  "dependencies": {}
 }

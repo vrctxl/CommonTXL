@@ -67,6 +67,12 @@ namespace Texel
 
             _InitHandlers();
 
+            if (eventIndex < 0 || eventIndex >= handlerCount.Length)
+            {
+                Debug.LogError($"GameObject {gameObject.name} tried to register out-of-range event {eventIndex} from origin {handler.gameObject.name}:{eventName}!");
+                return;
+            }
+
             for (int i = 0; i < handlerCount[eventIndex]; i++)
             {
                 if (handlers[eventIndex][i] == handler)
@@ -89,6 +95,15 @@ namespace Texel
 
         protected void _UpdateHandlers(int eventIndex)
         {
+            if (handlerCount == null)
+                return;
+
+            if (eventIndex < 0 || eventIndex >= handlerCount.Length)
+            {
+                Debug.LogError($"GameObject {gameObject.name} tried to trigger out-of-range event {eventIndex}!");
+                return;
+            }
+
             for (int i = 0; i < handlerCount[eventIndex]; i++)
             {
                 UdonBehaviour script = (UdonBehaviour)handlers[eventIndex][i];
@@ -98,6 +113,15 @@ namespace Texel
 
         protected void _UpdateHandlers(int eventIndex, object arg1)
         {
+            if (handlerCount == null)
+                return;
+
+            if (eventIndex < 0 || eventIndex >= handlerCount.Length)
+            {
+                Debug.LogError($"GameObject {gameObject.name} tried to trigger out-of-range event {eventIndex}!");
+                return;
+            }
+
             for (int i = 0; i < handlerCount[eventIndex]; i++)
             {
                 UdonBehaviour script = (UdonBehaviour)handlers[eventIndex][i];

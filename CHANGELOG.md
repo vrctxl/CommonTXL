@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.0.3] - 09-22-23
+
+- Fix crash in EventBase if events are fired before any handlers are registered
+- Removed depdency on UdonSharp package
+
 ## [1.0.2] - 08-31-23
 
 - Add Runtime/Scripts/AccessControlGraphAPI to expose a usable Access Control API to Udon Graph

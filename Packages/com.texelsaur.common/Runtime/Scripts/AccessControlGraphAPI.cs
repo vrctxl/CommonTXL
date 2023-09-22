@@ -6,6 +6,34 @@ using VRC.Udon;
 
 namespace Texel
 {
+    /*
+     * Graph API Custom Events
+     * 
+     * SetprogramVariable: aclUserSourceArg (UdonBehaviour)
+     * SendCustomEvent: _AddUserSource
+     * 
+     * SetProgramVariable: enforceArg (bool)
+     * SendCustomEvent: _Enforce
+     * 
+     * SendCustomEvent: _RefreshWhitelistCheck
+     * 
+     * SetProgramVariable: whitelistPlayerArg (VRCPlayerAPI)
+     * SendCustomEvent: _PlayerWhitelisted
+     * GetProgramVariable: playerWhitedlistedReturn (bool)
+     * 
+     * SendCustomEvent: _LocalWhitelisted
+     * GetProgramVariable: localWhitelistedReturn (bool)
+     * 
+     * SetProgramVariable: accessPlayerArg (VRCPlayerAPI)
+     * SendCustomEvent: _HasAccess
+     * GetProgramVariable: playerHasAccessReturn (bool)
+     * 
+     * SendCustomEvent: _LocalHasAccess
+     * GetProgramVariable: localHasAccessReturn (bool)
+     * 
+     * SendCustomEvent: _Validate
+     */
+
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class AccessControlGraphAPI : UdonSharpBehaviour
     {
