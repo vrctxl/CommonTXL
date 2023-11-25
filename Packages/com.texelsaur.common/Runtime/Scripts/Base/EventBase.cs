@@ -17,6 +17,7 @@ namespace Texel
 
         bool init = false;
         bool handlersInit = false;
+        int handlerUpdateLevel = 0;
 
         protected virtual int EventCount { get; }
 
@@ -73,9 +74,15 @@ namespace Texel
                 return;
             }
 
+            if (handlerUpdateLevel > 0)
+            {
+                Debug.LogError($"GameObject {gameObject.name} tried to register event {eventIndex} from origin {handler.gameObject.name}:{eventName} while handler update in progress!");
+                return;
+            }
+
             for (int i = 0; i < handlerCount[eventIndex]; i++)
             {
-                if (handlers[eventIndex][i] == handler)
+                if (handlers[eventIndex][i] == handler && handlerEvents[eventIndex][i] == eventName)
                     return;
             }
 
@@ -93,6 +100,48 @@ namespace Texel
             handlerCount[eventIndex] += 1;
         }
 
+        public void _Unregister(int eventIndex, Component handler, string eventName)
+        {
+            if (!Utilities.IsValid(handler) || !Utilities.IsValid(eventName))
+                return;
+
+            _InitHandlers();
+
+            if (eventIndex < 0 || eventIndex >= handlerCount.Length)
+            {
+                Debug.LogError($"GameObject {gameObject.name} tried to unregister out-of-range event {eventIndex} from origin {handler.gameObject.name}:{eventName}!");
+                return;
+            }
+
+            if (handlerUpdateLevel > 0)
+            {
+                Debug.LogError($"GameObject {gameObject.name} tried to unregister event {eventIndex} from origin {handler.gameObject.name}:{eventName} while handler update in progress!");
+                return;
+            }
+
+            int index = -1;
+            for (int i = 0; i < handlerCount[eventIndex]; i++)
+            {
+                if (handlers[eventIndex][i] == handler && handlerEvents[eventIndex][i] == eventName)
+                {
+                    index = i;
+                    break;
+                }
+            }
+
+            if (index == -1)
+                return;
+
+            handlers[eventIndex] = (Component[])_RemoveElement(handlers[eventIndex], index, typeof(Component));
+            handlerEvents[eventIndex] = (string[])_RemoveElement(handlerEvents[eventIndex], index, typeof(string));
+
+            handlerArg1[eventIndex] = (string[])_RemoveElement(handlerArg1[eventIndex], index, typeof(string));
+            handlerArg2[eventIndex] = (string[])_RemoveElement(handlerArg2[eventIndex], index, typeof(string));
+
+            handlerCount[eventIndex] -= 1;
+        }
+
+        [RecursiveMethod]
         protected void _UpdateHandlers(int eventIndex)
         {
             if (handlerCount == null)
@@ -104,13 +153,16 @@ namespace Texel
                 return;
             }
 
+            handlerUpdateLevel += 1;
             for (int i = 0; i < handlerCount[eventIndex]; i++)
             {
                 UdonBehaviour script = (UdonBehaviour)handlers[eventIndex][i];
                 script.SendCustomEvent(handlerEvents[eventIndex][i]);
             }
+            handlerUpdateLevel -= 1;
         }
 
+        [RecursiveMethod]
         protected void _UpdateHandlers(int eventIndex, object arg1)
         {
             if (handlerCount == null)
@@ -122,6 +174,7 @@ namespace Texel
                 return;
             }
 
+            handlerUpdateLevel += 1;
             for (int i = 0; i < handlerCount[eventIndex]; i++)
             {
                 UdonBehaviour script = (UdonBehaviour)handlers[eventIndex][i];
@@ -131,6 +184,7 @@ namespace Texel
 
                 script.SendCustomEvent(handlerEvents[eventIndex][i]);
             }
+            handlerUpdateLevel -= 1;
         }
 
         protected Array _AddElement(Array arr, object elem, Type type)
@@ -148,6 +202,27 @@ namespace Texel
                 newArr = Array.CreateInstance(type, 1);
 
             newArr.SetValue(elem, count);
+            return newArr;
+        }
+
+        protected Array _RemoveElement(Array arr, int index, Type type)
+        {
+            if (index < 0 || index >= arr.Length)
+                return arr;
+
+            Array newArr;
+
+            if (Utilities.IsValid(arr))
+            {
+                int newCount = arr.Length - 1;
+                newArr = Array.CreateInstance(type, newCount);
+                Array.Copy(arr, 0, newArr, 0, index);
+                if (index < newCount)
+                    Array.Copy(arr, index + 1, newArr, index, newCount - index);
+            }
+            else
+                newArr = Array.CreateInstance(type, 0);
+
             return newArr;
         }
     }

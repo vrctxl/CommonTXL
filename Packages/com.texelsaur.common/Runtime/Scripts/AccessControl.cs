@@ -325,7 +325,7 @@ namespace Texel
 
         public void _Validate()
         {
-            _UpdateHandlers(EVENT_VALIDATE);
+            _RefreshWhitelistCheck();
         }
 
         int _CheckAccessHandlerAccess(VRCPlayerApi player)
