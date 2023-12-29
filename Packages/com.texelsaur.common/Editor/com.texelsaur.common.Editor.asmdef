@@ -8,7 +8,9 @@
         "com.texelsaur.common",
         "VRC.Udon.Editor",
         "UdonSharp.Editor",
-        "VRC.Udon"
+        "VRC.Udon",
+        "UdonSharp.Lib",
+        "UdonSharp.Runtime"
     ],
     "includePlatforms": [
         "Editor"

@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.2.0] - 12-29-23
+
+- BREAKING: Removed _RegisterAccessHandler method from AccessControl
+- BREAKING: Removed RESULT_ALLOW, RESULT_DENY, RESULT_PASS constants from AccessControl
+- Added _AddAccessHandler method to AccessControl
+- Added accessHandlers field to AccessControl
+- Added AccessControlHandler base class for all access handler implementations to extend from
+- Added default GraphAPI child game object to AccessControl prefab 
+
 ## [1.1.0] - 11-25-23
 
 - Added _Unregister support to EventBase to detach event handlers

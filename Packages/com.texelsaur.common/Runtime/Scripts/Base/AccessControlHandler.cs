@@ -1,11 +1,18 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using Texel;
+using VRC.SDKBase;
 
 namespace Texel
 {
-    public abstract class AccessControlUserSource : EventBase
+    public enum AccessHandlerResult
+    {
+        Allow,
+        Deny,
+        Pass,
+    }
+
+    public abstract class AccessControlHandler : EventBase
     {
         public const int EVENT_REVALIDATE = 0;
         public const int EVENT_COUNT = 1;
@@ -17,9 +24,9 @@ namespace Texel
             _EnsureInit();
         }
 
-        public virtual bool _ContainsName(string name)
+        public virtual AccessHandlerResult _CheckAccess(VRCPlayerApi player)
         {
-            return false;
+            return AccessHandlerResult.Pass;
         }
     }
 }

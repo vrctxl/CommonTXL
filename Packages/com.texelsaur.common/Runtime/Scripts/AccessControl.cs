@@ -35,9 +35,9 @@ namespace Texel
         [Tooltip("A list of user sources to check for whitelisted players")]
         public AccessControlUserSource[] whitelistSources;
 
-        public const int RESULT_ALLOW = 1;
-        public const int RESULT_PASS = 0;
-        public const int RESULT_DENY = -1;
+        [Header("Access Handlers")]
+        [Tooltip("A list of access handlers that will be checked as part of any player access lookup first")]
+        public AccessControlHandler[] accessHandlers;
 
         bool _localPlayerWhitelisted = false;
         bool _localPlayerMaster = false;
@@ -51,13 +51,6 @@ namespace Texel
         VRCPlayerApi foundInstanceOwner = null;
         int foundMasterCount = 0;
         int foundInstanceOwnerCount = 0;
-
-        UdonBehaviour cachedAccessHandler;
-        Component[] accessHandlers;
-        int accessHandlerCount = 0;
-        string[] accessHandlerEvents;
-        string[] accessHandlerParams;
-        string[] accessHandlerResults;
 
         public const int EVENT_VALIDATE = 0;
         public const int EVENT_ENFORCE_UPDATE = 1;
@@ -121,6 +114,25 @@ namespace Texel
 
             whitelistSources = (AccessControlUserSource[])UtilityTxl.ArrayAddElement(whitelistSources, source, source.GetType());
             source._Register(AccessControlUserSource.EVENT_REVALIDATE, this, nameof(_RefreshWhitelistCheck));
+
+            _Validate();
+        }
+
+        public void _AddAccessHandler(AccessControlHandler accessHandler)
+        {
+            if (!accessHandler)
+                return;
+
+            foreach (var existing in accessHandlers)
+            {
+                if (existing == accessHandler)
+                    return;
+            }
+
+            accessHandlers = (AccessControlHandler[])UtilityTxl.ArrayAddElement(accessHandlers, accessHandler, accessHandler.GetType());
+            accessHandler._Register(AccessControlHandler.EVENT_REVALIDATE, this, nameof(_RefreshWhitelistCheck));
+
+            _Validate();
         }
 
         void _CalculateLocalAccess()
@@ -249,10 +261,10 @@ namespace Texel
             if (!Utilities.IsValid(player))
                 return false;
 
-            int handlerResult = _CheckAccessHandlerAccess(player);
-            if (handlerResult == RESULT_DENY)
+            AccessHandlerResult handlerResult = _CheckAccessHandlerAccess(player);
+            if (handlerResult == AccessHandlerResult.Deny)
                 return false;
-            if (handlerResult == RESULT_ALLOW)
+            if (handlerResult == AccessHandlerResult.Allow)
                 return true;
 
             if (allowAnyone)
@@ -276,10 +288,10 @@ namespace Texel
             if (!Utilities.IsValid(player))
                 return false;
 
-            int handlerResult = _CheckAccessHandlerAccess(player);
-            if (handlerResult == RESULT_DENY)
+            AccessHandlerResult handlerResult = _CheckAccessHandlerAccess(player);
+            if (handlerResult == AccessHandlerResult.Deny)
                 return false;
-            if (handlerResult == RESULT_ALLOW)
+            if (handlerResult == AccessHandlerResult.Allow)
                 return true;
 
             if (_localCalculatedAccess)
@@ -288,33 +300,6 @@ namespace Texel
                 return true;
 
             return false;
-        }
-
-        // One or more registered access handlers have a chance to force-allow or force-deny access for a player.
-        // If a handler has no preference, it should return RESULT_PASS (0) to allow the next handler to make a decision
-        // or let the local access control settings take effect.
-
-        public void _RegsiterAccessHandler(Component handler, string eventName, string playerParamVar, string resultVar)
-        {
-            if (!Utilities.IsValid(handler))
-                return;
-
-            for (int i = 0; i < accessHandlerCount; i++)
-            {
-                if (accessHandlers[i] == handler)
-                    return;
-            }
-
-            accessHandlers = (Component[])UtilityTxl.ArrayAddElement(accessHandlers, handler, typeof(Component));
-            accessHandlerEvents = (string[])UtilityTxl.ArrayAddElement(accessHandlerEvents, eventName, typeof(string));
-            accessHandlerParams = (string[])UtilityTxl.ArrayAddElement(accessHandlerParams, playerParamVar, typeof(string));
-            accessHandlerResults = (string[])UtilityTxl.ArrayAddElement(accessHandlerResults, resultVar, typeof(string));
-
-            DebugLog($"Registered access handler {eventName}");
-
-            cachedAccessHandler = (UdonBehaviour)handler;
-
-            accessHandlerCount += 1;
         }
 
         [Obsolete("Use _Register(AccessControl.EVENT_VALIDATE, ...)")]
@@ -328,38 +313,27 @@ namespace Texel
             _RefreshWhitelistCheck();
         }
 
-        int _CheckAccessHandlerAccess(VRCPlayerApi player)
+        AccessHandlerResult _CheckAccessHandlerAccess(VRCPlayerApi player)
         {
             if (!Utilities.IsValid(accessHandlers))
-                return RESULT_PASS;
+                return AccessHandlerResult.Pass;
 
             int handlerCount = accessHandlers.Length;
             if (handlerCount == 0)
-                return RESULT_PASS;
-
-            if (handlerCount == 1)
-            {
-                cachedAccessHandler.SetProgramVariable(accessHandlerParams[0], player);
-                cachedAccessHandler.SendCustomEvent(accessHandlerEvents[0]);
-                return (int)cachedAccessHandler.GetProgramVariable(accessHandlerResults[0]);
-            }
+                return AccessHandlerResult.Pass;
 
             for (int i = 0; i < handlerCount; i++)
             {
-                UdonBehaviour script = (UdonBehaviour)accessHandlers[i];
-                if (!Utilities.IsValid(script))
+                AccessControlHandler handler = accessHandlers[i];
+                if (!handler)
                     continue;
 
-                script.SetProgramVariable(accessHandlerParams[i], player);
-                script.SendCustomEvent(accessHandlerEvents[i]);
-                int result = (int)script.GetProgramVariable(accessHandlerResults[i]);
-                if (result == RESULT_PASS)
-                    continue;
-
-                return result;
+                AccessHandlerResult result = handler._CheckAccess(player);
+                if (result != AccessHandlerResult.Pass)
+                    return result;
             }
 
-            return RESULT_PASS;
+            return AccessHandlerResult.Pass;
         }
 
         void DebugLog(string message)
