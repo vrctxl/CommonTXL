@@ -1,4 +1,5 @@
-﻿using UdonSharp;
+﻿using TMPro;
+using UdonSharp;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -45,6 +46,7 @@ namespace Texel
         Image[] buttonBackground;
         Image[] buttonIcon;
         Text[] buttonText;
+        TextMeshProUGUI[] buttonTMP;
         int[] buttonColorIndex;
 
         Slider[] sliders;
@@ -89,6 +91,7 @@ namespace Texel
             buttonBackground = new Image[ButtonCount];
             buttonIcon = new Image[ButtonCount];
             buttonText = new Text[ButtonCount];
+            buttonTMP = new TextMeshProUGUI[ButtonCount];
 
             sliders = new Slider[SliderCount];
             inputFields = new InputField[InputFieldCount];
@@ -109,6 +112,8 @@ namespace Texel
                     buttonIcon[index] = child.GetComponent<Image>();
                 if (!buttonText[index])
                     buttonText[index] = child.GetComponent<Text>();
+                if (!buttonTMP[index])
+                    buttonTMP[index] = child.GetComponent<TextMeshProUGUI>();
             }
 
             _SetButton(index, false);
@@ -131,6 +136,10 @@ namespace Texel
             Text text = buttonText[buttonIndex];
             if (text)
                 text.color = state ? colorLookupActiveLabel[colorIndex] : colorLookupInactiveLabel[colorIndex];
+
+            TextMeshProUGUI tmp = buttonTMP[buttonIndex];
+            if (tmp)
+                tmp.color = state ? colorLookupActiveLabel[colorIndex] : colorLookupInactiveLabel[colorIndex];
         }
 
         protected void _SetButtonText(int buttonIndex, string value)
@@ -141,6 +150,10 @@ namespace Texel
             Text text = buttonText[buttonIndex];
             if (text)
                 text.text = value;
+
+            TextMeshProUGUI tmp = buttonTMP[buttonIndex];
+            if (tmp)
+                tmp.text = value;
         }
 
         protected void _DiscoverSlider(int index, GameObject slider)

@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0] - 02-11-24
+
+- CAUTION: Changed AccessControl to manual network sync
+- Added allowFirstJoin and restrictFirstJoinIfOwnerPresent options to AccessControl
+- Added TextMeshProGUI support to Button handlers in ControlBase
+- Included Udon Tools
+
 ## [1.2.0] - 12-29-23
 
 - BREAKING: Removed _RegisterAccessHandler method from AccessControl

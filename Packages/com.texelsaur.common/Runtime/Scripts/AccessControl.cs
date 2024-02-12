@@ -7,7 +7,7 @@ using VRC.Udon;
 
 namespace Texel
 {
-    [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
+    [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
     [DefaultExecutionOrder(-1)]
     public class AccessControl : EventBase
     {
@@ -20,6 +20,8 @@ namespace Texel
         public bool allowInstanceOwner = true;
         public bool allowMaster = true;
         public bool restrictMasterIfOwnerPresent = false;
+        public bool allowFirstJoin = false;
+        public bool restrictFirstJoinIfOwnerPresent = false;
         public bool allowWhitelist = false;
         public bool allowAnyone = false;
 
@@ -39,9 +41,13 @@ namespace Texel
         [Tooltip("A list of access handlers that will be checked as part of any player access lookup first")]
         public AccessControlHandler[] accessHandlers;
 
+        [UdonSynced]
+        private string syncFirstJoin;
+
         bool _localPlayerWhitelisted = false;
         bool _localPlayerMaster = false;
         bool _localPlayerInstanceOwner = false;
+        bool _localPlayerFirstJoin = false;
         bool _localCalculatedAccess = false;
 
         bool _worldHasOwner = false;
@@ -73,6 +79,20 @@ namespace Texel
 
                 _localPlayerMaster = player.isMaster;
                 _localPlayerInstanceOwner = player.isInstanceOwner;
+
+                if (string.IsNullOrEmpty(syncFirstJoin))
+                {
+                    if (Networking.IsOwner(gameObject))
+                    {
+                        _localPlayerFirstJoin = true;
+
+                        syncFirstJoin = player.displayName;
+                        RequestSerialization();
+                    }
+                }
+                else if (syncFirstJoin == player.displayName)
+                    _localPlayerFirstJoin = true;
+                
             }
 
             if (Utilities.IsValid(debugState))
@@ -83,6 +103,8 @@ namespace Texel
                 DebugLog($"Instance Owner: {_localPlayerInstanceOwner}");
             if (allowMaster)
                 DebugLog($"Instance Master: {_localPlayerMaster}");
+            if (allowFirstJoin)
+                DebugLog($"First Joined: {_localPlayerFirstJoin}");
             if (allowWhitelist)
                 DebugLog($"Whitelist: {_localPlayerWhitelisted}");
             if (allowAnyone)
@@ -273,6 +295,8 @@ namespace Texel
                 return true;
             if (allowMaster && player.isMaster && (!restrictMasterIfOwnerPresent || !_worldHasOwner))
                 return true;
+            if (allowFirstJoin && player.displayName == syncFirstJoin && (!restrictFirstJoinIfOwnerPresent || !_worldHasOwner))
+                return true;
             if (allowWhitelist && _PlayerWhitelisted(player))
                 return true;
 
@@ -297,6 +321,8 @@ namespace Texel
             if (_localCalculatedAccess)
                 return true;
             if (allowMaster && player.isMaster && (!restrictMasterIfOwnerPresent || !_worldHasOwner))
+                return true;
+            if (allowFirstJoin && player.displayName == syncFirstJoin && (!restrictFirstJoinIfOwnerPresent || !_worldHasOwner))
                 return true;
 
             return false;
@@ -336,6 +362,18 @@ namespace Texel
             return AccessHandlerResult.Pass;
         }
 
+        public override void OnDeserialization()
+        {
+            VRCPlayerApi player = Networking.LocalPlayer;
+            if (Utilities.IsValid(player) && !_localPlayerFirstJoin && syncFirstJoin == player.displayName)
+            {
+                _localPlayerFirstJoin = true;
+                DebugLog("First Joined: true");
+
+                _Validate();
+            }
+        }
+
         void DebugLog(string message)
         {
             if (!debugLogging)
@@ -352,14 +390,17 @@ namespace Texel
             debugState._SetValue("localCalculated", _localCalculatedAccess.ToString());
             debugState._SetValue("allowMaster", allowMaster.ToString());
             debugState._SetValue("allowInstanceOwner", allowInstanceOwner.ToString());
+            debugState._SetValue("allowFirstJoin", allowFirstJoin.ToString());
             debugState._SetValue("allowWhitelist", allowWhitelist.ToString());
             debugState._SetValue("allowAnyone", allowAnyone.ToString());
             debugState._SetValue("restrictMaster", restrictMasterIfOwnerPresent.ToString());
+            debugState._SetValue("restrictFirstJoin", restrictFirstJoinIfOwnerPresent.ToString());
             debugState._SetValue("enforce", enforce.ToString());
             debugState._SetValue("instanceOwner", Utilities.IsValid(foundInstanceOwner) ? foundInstanceOwner.displayName : "--");
             debugState._SetValue("instanceOwnerCount", foundInstanceOwnerCount.ToString());
             debugState._SetValue("master", Utilities.IsValid(foundMaster) ? foundMaster.displayName : "--");
             debugState._SetValue("masterCount", foundMasterCount.ToString());
+            debugState._SetValue("firstJoin", Utilities.IsValid(syncFirstJoin) ? syncFirstJoin : "--");
         }
     }
 }
