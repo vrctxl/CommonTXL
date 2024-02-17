@@ -121,6 +121,15 @@ namespace Texel
                         source._Register(AccessControlUserSource.EVENT_REVALIDATE, this, nameof(_RefreshWhitelistCheck));
                 }
             }
+
+            if (Utilities.IsValid(accessHandlers))
+            {
+                foreach (AccessControlHandler source in accessHandlers)
+                {
+                    if (Utilities.IsValid(source))
+                        source._Register(AccessControlHandler.EVENT_REVALIDATE, this, nameof(_RefreshWhitelistCheck));
+                }
+            }
         }
 
         public void _AddUserSource(AccessControlUserSource source)
