@@ -251,7 +251,7 @@ namespace Texel
         
         public void _RefreshAccessHandlerCheck()
         {
-            DebugLog($"Refresh access handler");
+            DebugLog("Refresh access handler");
             _UpdateHandlers(EVENT_VALIDATE);
         }
 
