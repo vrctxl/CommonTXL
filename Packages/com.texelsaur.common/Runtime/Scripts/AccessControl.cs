@@ -121,13 +121,13 @@ namespace Texel
                         source._Register(AccessControlUserSource.EVENT_REVALIDATE, this, nameof(_RefreshWhitelistCheck));
                 }
             }
-
+            
             if (Utilities.IsValid(accessHandlers))
             {
                 foreach (AccessControlHandler source in accessHandlers)
                 {
                     if (Utilities.IsValid(source))
-                        source._Register(AccessControlHandler.EVENT_REVALIDATE, this, nameof(_RefreshWhitelistCheck));
+                        source._Register(AccessControlHandler.EVENT_REVALIDATE, this, nameof(_RefreshAccessHandlerCheck));
                 }
             }
         }
@@ -161,7 +161,7 @@ namespace Texel
             }
 
             accessHandlers = (AccessControlHandler[])UtilityTxl.ArrayAddElement(accessHandlers, accessHandler, accessHandler.GetType());
-            accessHandler._Register(AccessControlHandler.EVENT_REVALIDATE, this, nameof(_RefreshWhitelistCheck));
+            accessHandler._Register(AccessControlHandler.EVENT_REVALIDATE, this, nameof(_RefreshAccessHandlerCheck));
 
             _Validate();
         }
@@ -246,6 +246,12 @@ namespace Texel
             }
 
             DebugLog($"Refresh whitelist local={_localPlayerWhitelisted}");
+            _UpdateHandlers(EVENT_VALIDATE);
+        }
+        
+        public void _RefreshAccessHandlerCheck()
+        {
+            DebugLog($"Refresh access handler");
             _UpdateHandlers(EVENT_VALIDATE);
         }
 
