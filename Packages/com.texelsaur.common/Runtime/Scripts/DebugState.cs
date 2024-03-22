@@ -9,7 +9,7 @@ using VRC.Udon;
 namespace Texel
 {
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
-    public class DebugState : UdonSharpBehaviour
+    public class DebugState : EventBase
     {
         public string title = "Component State";
         public float updateInterval = 1;
@@ -25,29 +25,21 @@ namespace Texel
         string[] keyBuffer = new string[0];
         string[] valBuffer = new string[0];
 
-        Component[] handlers;
-        int handlerCount = 0;
-        string[] handlerEvents;
         string[] handlerContexts;
 
         int currentContext = 0;
-        bool init = false;
+
+        public const int EVENT_UPDATE = 0;
+        const int EVENT_COUNT = 1;
 
         void Start()
         {
             _EnsureInit();
         }
 
-        public void _EnsureInit()
-        {
-            if (init)
-                return;
+        protected override int EventCount => EVENT_COUNT;
 
-            init = true;
-            _Init();
-        }
-
-        void _Init()
+        protected override void _Init()
         {
             if (Utilities.IsValid(titleText))
             {
@@ -55,8 +47,6 @@ namespace Texel
                     titleText[i].text = title;
             }
 
-            handlers = new Component[0];
-            handlerEvents = new string[0];
             handlerContexts = new string[0];
 
             SendCustomEventDelayedSeconds("_Update", updateInterval);
@@ -65,7 +55,7 @@ namespace Texel
         public void _Update()
         {
             _Begin();
-            if (handlerCount > 0)
+            if (handlerCount[EVENT_UPDATE] > 0)
             { 
                 _UpdateHandlers();
                 if (index > 0)
@@ -88,7 +78,7 @@ namespace Texel
                 values = (string[])_SizeArray(values, typeof(string), index + 50);
             }
 
-            if (handlerCount > 1)
+            if (handlerCount[EVENT_UPDATE] > 1)
                 keys[index] = $"{handlerContexts[currentContext]}:{key}";
             else
                 keys[index] = key;
@@ -117,52 +107,42 @@ namespace Texel
             }
         }
 
+        [Obsolete("Use EventBase _Register, optionally with separate _SetContext call")]
         public void _Regsiter(Component handler, string eventName, string context)
         {
-            if (!Utilities.IsValid(handler) || !Utilities.IsValid(eventName))
+            _Register(EVENT_UPDATE, handler, eventName);
+            _SetContext(handler, eventName, context);
+        }
+
+        override protected void _OnRegister(int eventIndex, int handlerIndex)
+        {
+            if (eventIndex == EVENT_UPDATE)
+                handlerContexts = (string[])_AddElement(handlerContexts, $"Source {handlerIndex}", typeof(string));
+        }
+
+        protected override void _OnUnregister(int eventIndex, int handlerIndex)
+        {
+            if (eventIndex == EVENT_UPDATE)
+                handlerContexts = (string[])_RemoveElement(handlerContexts, index, typeof(string));
+        }
+
+        public void _SetContext(Component handler, string eventName, string context)
+        {
+            int index = _FindHandlerIndex(EVENT_UPDATE, handler, eventName);
+            if (index == -1 || index >= handlerContexts.Length)
                 return;
 
-            _EnsureInit();
-
-            for (int i = 0; i < handlerCount; i++)
-            {
-                if (handlers[i] == handler)
-                    return;
-            }
-
-            handlers = (Component[])_AddElement(handlers, handler, typeof(Component));
-            handlerEvents = (string[])_AddElement(handlerEvents, eventName, typeof(string));
-            handlerContexts = (string[])_AddElement(handlerContexts, context, typeof(string));
-
-            handlerCount += 1;
+            handlerContexts[index] = context;
         }
 
         void _UpdateHandlers()
         {
-            for (int i = 0; i < handlerCount; i++)
+            for (int i = 0; i < handlerCount[EVENT_UPDATE]; i++)
             {
                 currentContext = i;
-                UdonBehaviour script = (UdonBehaviour)handlers[i];
-                script.SendCustomEvent(handlerEvents[i]);
+                UdonBehaviour script = (UdonBehaviour)handlers[EVENT_UPDATE][i];
+                script.SendCustomEvent(handlerEvents[EVENT_UPDATE][i]);
             }
-        }
-
-        Array _AddElement(Array arr, object elem, Type type)
-        {
-            Array newArr;
-            int count = 0;
-
-            if (Utilities.IsValid(arr))
-            {
-                count = arr.Length;
-                newArr = Array.CreateInstance(type, count + 1);
-                Array.Copy(arr, newArr, count);
-            }
-            else
-                newArr = Array.CreateInstance(type, 1);
-
-            newArr.SetValue(elem, count);
-            return newArr;
         }
 
         Array _SizeArray(Array arr, Type type, int size)

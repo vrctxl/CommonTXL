@@ -98,6 +98,13 @@ namespace Texel
                 handlerArg2[eventIndex][handlerArg2[eventIndex].Length - 1] = args[1];
 
             handlerCount[eventIndex] += 1;
+
+            _OnRegister(eventIndex, handlerCount[eventIndex] - 1);
+        }
+
+        protected virtual void _OnRegister(int eventIndex, int handlerIndex)
+        {
+
         }
 
         public void _Unregister(int eventIndex, Component handler, string eventName)
@@ -119,16 +126,7 @@ namespace Texel
                 return;
             }
 
-            int index = -1;
-            for (int i = 0; i < handlerCount[eventIndex]; i++)
-            {
-                if (handlers[eventIndex][i] == handler && handlerEvents[eventIndex][i] == eventName)
-                {
-                    index = i;
-                    break;
-                }
-            }
-
+            int index = _FindHandlerIndex(eventIndex, handler, eventName);
             if (index == -1)
                 return;
 
@@ -139,6 +137,13 @@ namespace Texel
             handlerArg2[eventIndex] = (string[])_RemoveElement(handlerArg2[eventIndex], index, typeof(string));
 
             handlerCount[eventIndex] -= 1;
+
+            _OnUnregister(eventIndex, index);
+        }
+
+        protected virtual void _OnUnregister(int eventIndex, int handlerIndex)
+        {
+
         }
 
         [RecursiveMethod]
@@ -224,6 +229,21 @@ namespace Texel
                 newArr = Array.CreateInstance(type, 0);
 
             return newArr;
+        }
+
+        protected int _FindHandlerIndex(int eventIndex, Component handler, string eventName)
+        {
+            int index = -1;
+            for (int i = 0; i < handlerCount[eventIndex]; i++)
+            {
+                if (handlers[eventIndex][i] == handler && handlerEvents[eventIndex][i] == eventName)
+                {
+                    index = i;
+                    break;
+                }
+            }
+
+            return index;
         }
     }
 }

@@ -1,4 +1,5 @@
-﻿using TMPro;
+﻿using System;
+using TMPro;
 using UdonSharp;
 using UnityEngine;
 using UnityEngine.UI;
@@ -11,31 +12,38 @@ namespace Texel
         public const int COLOR_YELLOW = 1;
         public const int COLOR_GREEN = 2;
         public const int COLOR_CYAN = 3;
+        public const int COLOR_WHITE = 4;
+        [Obsolete("Use correctly typed constant")]
         public const int COLOR_WHTIE = 4;
+        public const int COLOR_PURPLE = 5;
 
         Color activeYellow = Color.HSVToRGB(60 / 360f, .8f, .9f);
         Color activeRed = Color.HSVToRGB(0, .7f, .9f);
         Color activeGreen = Color.HSVToRGB(100 / 360f, .8f, .9f);
         Color activeCyan = Color.HSVToRGB(180 / 360f, .8f, .9f);
         Color activeWhite = Color.HSVToRGB(0, 0, .9f);
+        Color activePurple = Color.HSVToRGB(280 / 360f, .5f, 1f);
 
         Color activeYellowLabel = Color.HSVToRGB(60 / 360f, .8f, .5f);
         Color activeRedLabel = Color.HSVToRGB(0, .7f, .5f);
         Color activeGreenLabel = Color.HSVToRGB(110 / 360f, .8f, .5f);
         Color activeCyanLabel = Color.HSVToRGB(180 / 360f, .8f, .5f);
         Color activeWhiteLabel = Color.HSVToRGB(0, 0, .5f);
+        Color activePurpleLabel = Color.HSVToRGB(280 / 360f, .5f, .5f);
 
         Color inactiveYellow = Color.HSVToRGB(60 / 360f, .35f, .5f);
         Color inactiveRed = Color.HSVToRGB(0, .35f, .5f);
         Color inactiveGreen = Color.HSVToRGB(110 / 360f, .35f, .5f);
         Color inactiveCyan = Color.HSVToRGB(180 / 360f, .40f, .5f);
         Color inactiveWhite = Color.HSVToRGB(0, 0, .5f);
+        Color inactivePurple = Color.HSVToRGB(280 / 360f, .35f, .5f);
 
         Color inactiveYellowLabel = Color.HSVToRGB(60 / 360f, .35f, .2f);
         Color inactiveRedLabel = Color.HSVToRGB(0, .35f, .2f);
         Color inactiveGreenLabel = Color.HSVToRGB(110 / 360f, .35f, .2f);
         Color inactiveCyanLabel = Color.HSVToRGB(180 / 360f, .35f, .2f);
         Color inactiveWhiteLabel = Color.HSVToRGB(0, 0, .2f);
+        Color inactivePurpleLabel = Color.HSVToRGB(280 / 360f, .35f, .2f);
 
         Color[] colorLookupActive;
         Color[] colorLookupInactive;
@@ -65,11 +73,19 @@ namespace Texel
                 return;
 
             init = true;
+
+            _PreInit();
             _InitControls();
             _Init();
+
+            SendCustomEventDelayedFrames(nameof(_InternalPostInit), 1);
         }
 
+        protected virtual void _PreInit() { }
+
         protected virtual void _Init() { }
+
+        protected virtual void _PostInit() { }
 
         protected void _InitControls()
         {
@@ -78,12 +94,12 @@ namespace Texel
 
             controlsInit = true;
 
-            colorLookupActive = new Color[] { activeRed, activeYellow, activeGreen, activeCyan, activeWhite };
-            colorLookupInactive = new Color[] { inactiveRed, inactiveYellow, inactiveGreen, inactiveCyan, inactiveWhite };
-            colorLookupDisabled = new Color[] { inactiveRed, inactiveYellow, inactiveGreen, inactiveCyan, inactiveWhite };
+            colorLookupActive = new Color[] { activeRed, activeYellow, activeGreen, activeCyan, activeWhite, activePurple };
+            colorLookupInactive = new Color[] { inactiveRed, inactiveYellow, inactiveGreen, inactiveCyan, inactiveWhite, inactivePurple };
+            colorLookupDisabled = new Color[] { inactiveRed, inactiveYellow, inactiveGreen, inactiveCyan, inactiveWhite, inactivePurple };
 
-            colorLookupActiveLabel = new Color[] { activeRedLabel, activeYellowLabel, activeGreenLabel, activeCyanLabel, activeWhiteLabel };
-            colorLookupInactiveLabel = new Color[] { inactiveRedLabel, inactiveYellowLabel, inactiveGreenLabel, inactiveCyanLabel, inactiveWhiteLabel };
+            colorLookupActiveLabel = new Color[] { activeRedLabel, activeYellowLabel, activeGreenLabel, activeCyanLabel, activeWhiteLabel, activePurpleLabel };
+            colorLookupInactiveLabel = new Color[] { inactiveRedLabel, inactiveYellowLabel, inactiveGreenLabel, inactiveCyanLabel, inactiveWhiteLabel, inactivePurpleLabel };
 
             int buttonCount = ButtonCount;
 
@@ -95,6 +111,11 @@ namespace Texel
 
             sliders = new Slider[SliderCount];
             inputFields = new InputField[InputFieldCount];
+        }
+
+        public void _InternalPostInit()
+        {
+            _PostInit();
         }
 
         protected void _DiscoverButton(int index, GameObject button, int colorIndex)
@@ -140,6 +161,15 @@ namespace Texel
             TextMeshProUGUI tmp = buttonTMP[buttonIndex];
             if (tmp)
                 tmp.color = state ? colorLookupActiveLabel[colorIndex] : colorLookupInactiveLabel[colorIndex];
+        }
+
+        protected void _SetButton(int buttonIndex, bool state, int colorIndex)
+        {
+            if (buttonIndex < 0 || buttonIndex >= ButtonCount)
+                return;
+
+            buttonColorIndex[buttonIndex] = colorIndex;
+            _SetButton(buttonIndex, state);
         }
 
         protected void _SetButtonText(int buttonIndex, string value)
