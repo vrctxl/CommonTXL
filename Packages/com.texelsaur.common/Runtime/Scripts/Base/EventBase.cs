@@ -27,11 +27,24 @@ namespace Texel
                 return;
 
             init = true;
+
+            _PreInit();
             _InitHandlers();
             _Init();
+
+            SendCustomEventDelayedFrames(nameof(_InternalPostInit), 1);
         }
 
+        protected virtual void _PreInit() { }
+
         protected virtual void _Init() { }
+
+        protected virtual void _PostInit() { }
+
+        public void _InternalPostInit()
+        {
+            _PostInit();
+        }
 
         protected bool Initialized
         {

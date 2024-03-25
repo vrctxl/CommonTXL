@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.4.0] - 03-24-24
+
+- Added virtual _PreInit method to EventBase that's called before initializing handlers
+- Added virtual _PostInit method to EventBase that's called on next frame after _Init
+- Added virtual _OnRegister and _OnUnregister internal callbacks to EventBase
+- Added virtual _PreInit method to ControlBase that's called before initializing controls
+- Added virtual _PostInit method to ControlBase that's called on next frame after _Init
+- Added _SetButton variant to ControlBase that takes color index
+- Added purple as default color to ControlBase
+- Changed DebugState to extend EventBase
+- Added _SetContext method to DebugState to add context after registering normal event handler
+- Added _ContainsPlayer and _ContainsAnyPlayerInWorld methods to AccessControlUserSource abstract class
+- Added "loop 1" icon to UI atlas
+- Added MenuUtil class for editor support
+
 ## [1.3.0] - 02-11-24
 
 - CAUTION: Changed AccessControl to manual network sync
