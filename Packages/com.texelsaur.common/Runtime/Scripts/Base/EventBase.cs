@@ -19,6 +19,8 @@ namespace Texel
         bool handlersInit = false;
         int handlerUpdateLevel = 0;
 
+        protected DebugLog eventDebugLog;
+
         protected virtual int EventCount { get; }
 
         public void _EnsureInit()
@@ -159,7 +161,6 @@ namespace Texel
 
         }
 
-        [RecursiveMethod]
         protected void _UpdateHandlers(int eventIndex)
         {
             if (handlerCount == null)
@@ -167,14 +168,65 @@ namespace Texel
 
             if (eventIndex < 0 || eventIndex >= handlerCount.Length)
             {
-                Debug.LogError($"GameObject {gameObject.name} tried to trigger out-of-range event {eventIndex}!");
+                string errStr = $"GameObject {gameObject.name} tried to trigger out-of-range event {eventIndex}!";
+                Debug.LogError(errStr);
+                if (eventDebugLog)
+                    eventDebugLog._Write("  event", errStr);
                 return;
             }
 
+            if (handlerUpdateLevel == 0)
+                _InternalUpdateHandlers1(eventIndex);
+            else if (handlerUpdateLevel == 1)
+                _InternalUpdateHandlers2(eventIndex);
+            else if (handlerUpdateLevel == 2)
+                _InternalUpdateHandlers3(eventIndex);
+            else
+            {
+                string errStr = $"[{handlerUpdateLevel}] [{gameObject.name}:{eventIndex}] [X] -> Event call depth exceeded!";
+                Debug.LogError(errStr);
+                if (eventDebugLog)
+                    eventDebugLog._Write("  event", errStr);
+            }
+        }
+
+        public void _InternalUpdateHandlers1(int eventIndex)
+        {
             handlerUpdateLevel += 1;
-            for (int i = 0; i < handlerCount[eventIndex]; i++)
+            int count = handlerCount[eventIndex];
+            for (int i = 0; i < count; i++)
             {
                 UdonBehaviour script = (UdonBehaviour)handlers[eventIndex][i];
+                if (eventDebugLog)
+                    eventDebugLog._Write("  event", $"[{handlerUpdateLevel}] [{gameObject.name}:{eventIndex}] [{i + 1}/{count}] -> {script.gameObject.name}:{handlerEvents[eventIndex][i]}");
+                script.SendCustomEvent(handlerEvents[eventIndex][i]);
+            }
+            handlerUpdateLevel -= 1;
+        }
+
+        public void _InternalUpdateHandlers3(int eventIndex)
+        {
+            handlerUpdateLevel += 1;
+            int count = handlerCount[eventIndex];
+            for (int i = 0; i < count; i++)
+            {
+                UdonBehaviour script = (UdonBehaviour)handlers[eventIndex][i];
+                if (eventDebugLog)
+                    eventDebugLog._Write("  event", $"[{handlerUpdateLevel}] [{gameObject.name}:{eventIndex}] [{i + 1}/{count}] -> {script.gameObject.name}:{handlerEvents[eventIndex][i]}");
+                script.SendCustomEvent(handlerEvents[eventIndex][i]);
+            }
+            handlerUpdateLevel -= 1;
+        }
+
+        public void _InternalUpdateHandlers2(int eventIndex)
+        {
+            handlerUpdateLevel += 1;
+            int count = handlerCount[eventIndex];
+            for (int i = 0; i < count; i++)
+            {
+                UdonBehaviour script = (UdonBehaviour)handlers[eventIndex][i];
+                if (eventDebugLog)
+                    eventDebugLog._Write("  event", $"[{handlerUpdateLevel}] [{gameObject.name}:{eventIndex}] [{i + 1}/{count}] -> {script.gameObject.name}:{handlerEvents[eventIndex][i]}");
                 script.SendCustomEvent(handlerEvents[eventIndex][i]);
             }
             handlerUpdateLevel -= 1;
