@@ -74,7 +74,11 @@ namespace Texel
                 handlerArg1[i] = new string[0];
                 handlerArg2[i] = new string[0];
             }
+
+            _OnInitHandlers();
         }
+
+        protected virtual void _OnInitHandlers() { }
 
         public void _Register(int eventIndex, Component handler, string eventName, params string[] args)
         {

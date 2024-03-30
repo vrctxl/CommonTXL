@@ -47,9 +47,12 @@ namespace Texel
                     titleText[i].text = title;
             }
 
-            handlerContexts = new string[0];
-
             SendCustomEventDelayedSeconds("_Update", updateInterval);
+        }
+
+        protected override void _OnInitHandlers()
+        {
+            handlerContexts = new string[0];
         }
 
         public void _Update()
@@ -123,7 +126,7 @@ namespace Texel
         protected override void _OnUnregister(int eventIndex, int handlerIndex)
         {
             if (eventIndex == EVENT_UPDATE)
-                handlerContexts = (string[])_RemoveElement(handlerContexts, index, typeof(string));
+                handlerContexts = (string[])_RemoveElement(handlerContexts, handlerIndex, typeof(string));
         }
 
         public void _SetContext(Component handler, string eventName, string context)

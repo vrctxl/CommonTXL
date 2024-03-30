@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.5.1] - 03-30-24
+
+- Added virtual _OnInitHandlers method to EventBase that's called after handlers are initialized
+- Fixed DebugState not adding context in all cases
+
+## [1.5.0] - 03-28-24
+
+- Fixed event handlers not always being called if same handler was re-entered
+- Added eventDebuglog field to EventBase
+- Added AccessEventBase class
+
 ## [1.4.0] - 03-24-24
 
 - Added virtual _PreInit method to EventBase that's called before initializing handlers
