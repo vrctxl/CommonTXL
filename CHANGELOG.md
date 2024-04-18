@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.2] - 04-18-24
+
+- Changed protected void _DebugLog to void _AccessDebugLog in AccessEventBase
+- Added optional color field to _Write method in DebugLog
+- DebugLog prefab text changed to rich formatting by default
+- Added BasicTest abstract class as standin for Func<bool>()
+
 ## [1.5.1] - 03-30-24
 
 - Added virtual _OnInitHandlers method to EventBase that's called after handlers are initialized

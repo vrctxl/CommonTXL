@@ -27,6 +27,11 @@ namespace Texel
 
         public void _Write(string component, string message)
         {
+            _Write(component, message, null);
+        }
+
+        public void _Write(string component, string message, string color)
+        {
             if (debugLines == null || debugLines.Length == 0)
             {
                 debugLines = new string[lineCount];
@@ -38,7 +43,11 @@ namespace Texel
             if (timestamp)
                 stamp = string.Format("[{0,9:F3}] ", Time.time);
 
-            debugLines[debugIndex] = $"{stamp}[{component}] {message}";
+            if (color != null)
+                debugLines[debugIndex] = $"<color=#{color}>{stamp}[{component}] {message}</color>";
+            else
+                debugLines[debugIndex] = $"{stamp}[{component}] {message}";
+
 
             string buffer = "";
             for (int i = debugIndex + 1; i < debugLines.Length; i++)
@@ -57,7 +66,7 @@ namespace Texel
 
         public void _WriteError(string component, string message)
         {
-            _Write(component, $"<color=#FF0000>{message}</color>");
+            _Write(component, message, "FF0000");
         }
     }
 }

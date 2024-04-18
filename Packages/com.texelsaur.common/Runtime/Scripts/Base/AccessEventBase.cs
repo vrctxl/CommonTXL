@@ -35,7 +35,7 @@ namespace Texel
             bool requesterCheck = accessControl._HasAccess(requestingPlayer) || Networking.IsOwner(requestingPlayer, gameObject);
             bool requesteeCheck = accessControl._HasAccess(requestedOwner);
 
-            _DebugLowLevel($"Ownership check: requester={requesterCheck}, requestee={requesteeCheck}");
+            _AccessDebugLowLevel($"Ownership check: requester={requesterCheck}, requestee={requesteeCheck}");
 
             return requesterCheck && requesteeCheck;
         }
@@ -60,7 +60,7 @@ namespace Texel
             }
 
             string name = Utilities.IsValid(player) ? player.displayName : "";
-            _DebugLowLevel($"Ownserhip transferred to {name}");
+            _AccessDebugLowLevel($"Ownserhip transferred to {name}");
 
             if (Networking.IsOwner(gameObject))
                 isOwner = true;
@@ -68,7 +68,7 @@ namespace Texel
 
         public void RequestOwnerSync()
         {
-            _DebugLog("RequestOwnerSync");
+            _AccessDebugLog("RequestOwnerSync");
             if (Networking.IsOwner(gameObject))
                 RequestSerialization();
         }
@@ -99,13 +99,13 @@ namespace Texel
 
         protected virtual void _AccessOwnershipChange() { }
 
-        protected void _DebugLog(string message)
+        void _AccessDebugLog(string message)
         {
             if (accessDebugLog)
                 accessDebugLog._Write(componentName, message);
         }
 
-        protected void _DebugLowLevel(string message)
+        void _AccessDebugLowLevel(string message)
         {
             if (accessDebugLog && accessDebugLowLevel)
                 accessDebugLog._Write(componentName, message);
