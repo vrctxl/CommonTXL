@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.5.3] - 06-04-24
+
+- Fixed network desync in SyncPlayerList
+- Increased sprite pixel units on UI atlas
+
 ## [1.5.2] - 04-18-24
 
 - Changed protected void _DebugLog to void _AccessDebugLog in AccessEventBase

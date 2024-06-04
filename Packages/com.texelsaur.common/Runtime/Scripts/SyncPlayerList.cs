@@ -165,7 +165,7 @@ namespace Texel
                 if (syncPlayerIds[i] == id)
                     return i;
 
-                if (nextIndex == -1 && syncPlayerNames[i] == null && !syncLockout[i])
+                if (nextIndex == -1 && (syncPlayerNames[i] == null || syncPlayerNames[i] == string.Empty) && !syncLockout[i])
                     nextIndex = i;
             }
 
@@ -247,7 +247,7 @@ namespace Texel
 
         bool _RemovePlayerAtIndexChecked(int index)
         {
-            if (syncPlayerIds[index] == -1 && syncPlayerNames[index] == null)
+            if (syncPlayerIds[index] == -1 && (syncPlayerNames[index] == null || syncPlayerNames[index] == string.Empty))
                 return false;
 
             if (syncLockout[index])
@@ -258,13 +258,13 @@ namespace Texel
                 syncPlayerIds[index] = syncPlayerIds[syncMaxIndex];
                 syncPlayerNames[index] = syncPlayerNames[syncMaxIndex];
                 syncPlayerIds[syncMaxIndex] = -1;
-                syncPlayerNames[syncMaxIndex] = null;
+                syncPlayerNames[syncMaxIndex] = string.Empty;
                 syncMaxIndex -= 1;
             }
             else
             {
                 syncPlayerIds[index] = -1;
-                syncPlayerNames[index] = null;
+                syncPlayerNames[index] = string.Empty;
             }
 
             syncChangeCount += 1;
@@ -506,7 +506,30 @@ namespace Texel
 
         public override void OnPostSerialization(SerializationResult result)
         {
+            if (!result.success)
+            {
+                DebugError($"PostSerialize: {result.success}, {result.byteCount} bytes");
+                DebugError($"  syncPlayerNames = {syncPlayerNames}, len = {(syncPlayerNames != null ? syncPlayerNames.Length : -1)}, nullcount = {_NullCount(syncPlayerNames)}");
+                DebugError($"  syncPlayerIds = {syncPlayerIds}, len = {(syncPlayerIds != null ? syncPlayerIds.Length : -1)}, nullcount = {_NullCount(syncPlayerIds)}");
+                DebugError($"  syncLockout = {syncLockout}, len = {(syncLockout != null ? syncLockout.Length : -1)}, nullcount = {_NullCount(syncLockout)}");
+            }
+
             DebugLowLevel($"PostSerialize: {result.success}, {result.byteCount} bytes");
+        }
+
+        int _NullCount(Array arr)
+        {
+            if (arr == null)
+                return 0;
+
+            int count = 0;
+            for (int i = 0; i < arr.Length; i++)
+            {
+                if (arr.GetValue(i) == null)
+                    count += 1;
+            }
+
+            return count;
         }
 
         public override bool OnOwnershipRequest(VRCPlayerApi requestingPlayer, VRCPlayerApi requestedOwner)
@@ -542,6 +565,12 @@ namespace Texel
         {
             if (debugLog)
                 debugLog._Write("PlayerList", message);
+        }
+
+        void DebugError(string message)
+        {
+            if (debugLog)
+                debugLog._WriteError("PlayerList", message);
         }
 
         void DebugLowLevel(string message)
