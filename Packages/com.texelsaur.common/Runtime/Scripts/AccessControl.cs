@@ -391,7 +391,7 @@ namespace Texel
 
         void DebugLog(string message)
         {
-            if (!debugLogging)
+            if (debugLogging)
                 Debug.Log("[Texel:AccessControl] " + message);
             if (Utilities.IsValid(debugLog))
                 debugLog._Write("AccessControl", message);
