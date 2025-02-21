@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.5.4] - 02-20-25
+
+- Fixed crash in SyncPlayerList when more than 10 players are added
+- Fixed Access Conrol debug option being inverted (Thanks CompuGenius-Programs)
+
 ## [1.5.3] - 06-04-24
 
 - Fixed network desync in SyncPlayerList

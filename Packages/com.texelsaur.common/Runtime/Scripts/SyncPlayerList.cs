@@ -33,6 +33,8 @@ namespace Texel
         public DebugLog debugLog;
         [Tooltip("Log additional lower-level udon events")]
         public bool lowLevelDebug = false;
+        [Tooltip("For specific testing scenarios")]
+        public bool allowDuplicateNames = false;
 
         [UdonSynced]
         int syncChangeCount = 0;
@@ -40,6 +42,8 @@ namespace Texel
         int syncLockoutChangeCount = 0;
         [UdonSynced]
         int syncMaxIndex = -1;
+        [UdonSynced]
+        int syncCapacity = 0;
         [UdonSynced]
         string[] syncPlayerNames = new string[0];
         [UdonSynced]
@@ -56,7 +60,9 @@ namespace Texel
 
         public const int EVENT_MEMBERSHIP_CHANGE = 0;
         public const int EVENT_LOCKOUT_CHANGE = 1;
-        public const int EVENT_COUNT = 2;
+        const int EVENT_COUNT = 2;
+
+        const int CAP_INCR = 10;
 
         void Start()
         {
@@ -69,9 +75,10 @@ namespace Texel
         {
             DebugLog("Init");
 
-            syncPlayerNames = new string[10];
-            syncPlayerIds = new int[10];
-            syncLockout = new bool[10];
+            syncCapacity = CAP_INCR;
+            syncPlayerNames = new string[syncCapacity];
+            syncPlayerIds = new int[syncCapacity];
+            syncLockout = new bool[syncCapacity];
 
             for (int i = 0; i < syncPlayerNames.Length; i++)
                 syncPlayerNames[i] = string.Empty;
@@ -93,11 +100,11 @@ namespace Texel
             if (!_AccessCheck())
                 return;
 
-            int nextSize = (names.Length / 10 + 1) * 10;
+            syncCapacity = (names.Length / CAP_INCR + 1) * CAP_INCR;
 
-            syncPlayerNames = new string[nextSize];
-            syncPlayerIds = new int[nextSize];
-            syncLockout = new bool[nextSize];
+            syncPlayerNames = new string[syncCapacity];
+            syncPlayerIds = new int[syncCapacity];
+            syncLockout = new bool[syncCapacity];
 
             for (int i = 0; i < names.Length; i++)
                 syncPlayerNames[i] = names[i];
@@ -160,7 +167,7 @@ namespace Texel
             int nextIndex = -1;
             for (int i = 0; i <= syncMaxIndex; i++)
             {
-                if (syncPlayerNames[i] == player.displayName)
+                if (syncPlayerNames[i] == player.displayName && !allowDuplicateNames)
                     syncPlayerIds[i] = player.playerId;
                 if (syncPlayerIds[i] == id)
                     return i;
@@ -178,7 +185,7 @@ namespace Texel
 
                     syncMaxIndex += 1;
                     nextIndex = syncMaxIndex;
-                } while (syncLockout[syncMaxIndex]);
+                } while (syncMaxIndex < syncCapacity && syncLockout[syncMaxIndex]);
             }
             else if (syncMaxIndex < nextIndex)
                 syncMaxIndex = nextIndex;
@@ -186,14 +193,8 @@ namespace Texel
             int arrLength = syncPlayerIds.Length;
             if (syncMaxIndex >= arrLength)
             {
-                syncPlayerIds = (int[])UtilityTxl.ArrayMinSize(syncPlayerIds, syncPlayerIds.Length + 10, typeof(int));
-                syncPlayerNames = (string[])UtilityTxl.ArrayMinSize(syncPlayerNames, syncPlayerNames.Length + 10, typeof(string));
-                syncLockout = (bool[])UtilityTxl.ArrayMinSize(syncLockout, syncLockout.Length + 10, typeof(bool));
-
-                for (int i = arrLength; i < syncPlayerIds.Length; i++)
-                    syncPlayerIds[i] = -1;
-                for (int i = arrLength; i < syncPlayerNames.Length; i++)
-                    syncPlayerNames[i] = string.Empty;
+                _ResizeLists((Math.Max(arrLength, syncMaxIndex) + CAP_INCR) / CAP_INCR * CAP_INCR);
+                syncCapacity = syncPlayerIds.Length;
             }
 
             syncChangeCount += 1;
@@ -207,6 +208,22 @@ namespace Texel
             DebugLog($"Added player {syncPlayerNames[syncMaxIndex]} at {syncMaxIndex}");
 
             return syncMaxIndex;
+        }
+
+        void _ResizeLists(int minLength)
+        {
+            int length = syncPlayerIds.Length;
+            if (length >= minLength)
+                return;
+
+            syncPlayerIds = (int[])UtilityTxl.ArrayMinSize(syncPlayerIds, minLength, typeof(int));
+            syncPlayerNames = (string[])UtilityTxl.ArrayMinSize(syncPlayerNames, minLength, typeof(string));
+            syncLockout = (bool[])UtilityTxl.ArrayMinSize(syncLockout, minLength, typeof(bool));
+
+            for (int i = length; i < syncPlayerIds.Length; i++)
+                syncPlayerIds[i] = -1;
+            for (int i = length; i < syncPlayerNames.Length; i++)
+                syncPlayerNames[i] = string.Empty;
         }
 
         public bool _RemovePlayer(VRCPlayerApi player)
@@ -257,14 +274,19 @@ namespace Texel
             {
                 syncPlayerIds[index] = syncPlayerIds[syncMaxIndex];
                 syncPlayerNames[index] = syncPlayerNames[syncMaxIndex];
+                syncLockout[index] = syncLockout[syncMaxIndex];
+
                 syncPlayerIds[syncMaxIndex] = -1;
                 syncPlayerNames[syncMaxIndex] = string.Empty;
+                syncLockout[syncMaxIndex] = false;
+
                 syncMaxIndex -= 1;
             }
             else
             {
                 syncPlayerIds[index] = -1;
                 syncPlayerNames[index] = string.Empty;
+                syncLockout[index] = false;
             }
 
             syncChangeCount += 1;
@@ -350,7 +372,10 @@ namespace Texel
                 return false;
 
             if (index >= syncLockout.Length)
-                syncLockout = (bool[])UtilityTxl.ArrayMinSize(syncLockout, (index + 10) / 10 * 10, typeof(bool));
+            {
+                _ResizeLists((index + CAP_INCR) / CAP_INCR * CAP_INCR);
+                syncCapacity = syncPlayerIds.Length;
+            }
 
             if (syncLockout[index] == state)
                 return true;
