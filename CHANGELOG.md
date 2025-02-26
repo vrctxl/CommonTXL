@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.5.5] - 02-26-25
+
+- UI image atlas update
+
 ## [1.5.4] - 02-20-25
 
 - Fixed crash in SyncPlayerList when more than 10 players are added
