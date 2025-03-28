@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.5.6] - 03-28-25
+
+- Added ControlColorMap class for remapping colors on ControlBase
+- ControlBase takes optional ControlColorMap object
+- Added _SetColor method to ControlBase to change color at runtime
+
 ## [1.5.5] - 02-26-25
 
 - UI image atlas update
