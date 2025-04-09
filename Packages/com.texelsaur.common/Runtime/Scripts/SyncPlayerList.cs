@@ -198,16 +198,16 @@ namespace Texel
             }
 
             syncChangeCount += 1;
-            syncPlayerIds[syncMaxIndex] = id;
-            syncPlayerNames[syncMaxIndex] = player.displayName;
-            syncLockout[syncMaxIndex] = false;
+            syncPlayerIds[nextIndex] = id;
+            syncPlayerNames[nextIndex] = player.displayName;
+            syncLockout[nextIndex] = false;
 
             RequestSerialization();
             _UpdateHandlers(EVENT_MEMBERSHIP_CHANGE);
 
-            DebugLog($"Added player {syncPlayerNames[syncMaxIndex]} at {syncMaxIndex}");
+            DebugLog($"Added player {syncPlayerNames[nextIndex]} at {nextIndex}");
 
-            return syncMaxIndex;
+            return nextIndex;
         }
 
         void _ResizeLists(int minLength)
