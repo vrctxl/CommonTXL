@@ -201,6 +201,11 @@ namespace Texel
             for (int i = 0; i < count; i++)
             {
                 UdonBehaviour script = (UdonBehaviour)handlers[eventIndex][i];
+                if (!script)
+                {
+                    Debug.LogError($"EventBase [{gameObject.name}:{eventIndex}] registered handler missing or destroyed");
+                    continue;
+                }
                 if (eventDebugLog)
                     eventDebugLog._Write("  event", $"[{handlerUpdateLevel}] [{gameObject.name}:{eventIndex}] [{i + 1}/{count}] -> {script.gameObject.name}:{handlerEvents[eventIndex][i]}");
                 script.SendCustomEvent(handlerEvents[eventIndex][i]);
@@ -215,6 +220,11 @@ namespace Texel
             for (int i = 0; i < count; i++)
             {
                 UdonBehaviour script = (UdonBehaviour)handlers[eventIndex][i];
+                if (!script)
+                {
+                    Debug.LogError($"EventBase [{gameObject.name}:{eventIndex}] registered handler missing or destroyed");
+                    continue;
+                }
                 if (eventDebugLog)
                     eventDebugLog._Write("  event", $"[{handlerUpdateLevel}] [{gameObject.name}:{eventIndex}] [{i + 1}/{count}] -> {script.gameObject.name}:{handlerEvents[eventIndex][i]}");
                 script.SendCustomEvent(handlerEvents[eventIndex][i]);
@@ -229,6 +239,11 @@ namespace Texel
             for (int i = 0; i < count; i++)
             {
                 UdonBehaviour script = (UdonBehaviour)handlers[eventIndex][i];
+                if (!script)
+                {
+                    Debug.LogError($"EventBase [{gameObject.name}:{eventIndex}] registered handler missing or destroyed");
+                    continue;
+                }
                 if (eventDebugLog)
                     eventDebugLog._Write("  event", $"[{handlerUpdateLevel}] [{gameObject.name}:{eventIndex}] [{i + 1}/{count}] -> {script.gameObject.name}:{handlerEvents[eventIndex][i]}");
                 script.SendCustomEvent(handlerEvents[eventIndex][i]);

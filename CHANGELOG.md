@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.5.7] - 04-10-25
+
+- Fixed SyncPlayerList not adding to correct slots when autocompact is turned off
+- Added checks in event base for invalid registered handlers
+
 ## [1.5.6] - 03-28-25
 
 - Added ControlColorMap class for remapping colors on ControlBase
