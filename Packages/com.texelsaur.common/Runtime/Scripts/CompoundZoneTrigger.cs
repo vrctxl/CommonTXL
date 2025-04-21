@@ -220,6 +220,44 @@ namespace Texel
             return false;
         }
 
+        public override bool _PlayerPositionInZone(VRCPlayerApi player, float radius = 0)
+        {
+            return _PlayerPositionInZone(player, radius, false);
+        }
+
+        public override bool _PlayerPositionInZoneTriggering(VRCPlayerApi player, float radius = 0)
+        {
+            return _PlayerPositionInZone(player, radius, true);
+        }
+
+        bool _PlayerPositionInZone(VRCPlayerApi player, float radius, bool triggering)
+        {
+            _EnsureInit();
+
+            if (!Utilities.IsValid(player))
+                return false;
+
+            Vector3 pos = player.GetPosition();
+
+            int containCount = 0;
+            foreach (var c in validColliders)
+            {
+                if (!c.enabled)
+                    continue;
+
+                Vector3 closest = c.ClosestPoint(pos);
+                if ((closest - pos).sqrMagnitude < radius + Mathf.Epsilon)
+                    containCount += 1;
+            }
+
+            int set = triggering ? enterSetMode : leaveSetMode;
+
+            if (set == SET_INTERSECT)
+                return containCount == colliderCount;
+            else
+                return containCount > 0;
+        }
+
         public void _LogEnter()
         {
             Debug.Log("Enter");

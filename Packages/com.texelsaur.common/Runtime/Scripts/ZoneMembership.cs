@@ -16,6 +16,8 @@ namespace Texel
         public ZoneTrigger triggerZone;
         [Tooltip("Update membership in response to world join and leave events")]
         public bool worldEvents = false;
+        [Tooltip("How many membership checks should be made per second.  When tracked members exceeds this value, each member will be checked less than once per second.  Zero disabled checking.")]
+        public float checkMembershipRate = 0;
 
         [NonSerialized]
         public VRCPlayerApi playerEventArg;
@@ -23,6 +25,7 @@ namespace Texel
         int[] players = new int[100];
         int maxIndex = -1;
         bool init = false;
+        float checkRate = 0;
 
         //int handlerCount = 0;
         //Component[] targetBehaviors;
@@ -58,6 +61,9 @@ namespace Texel
 
         void _Init()
         {
+            if (checkMembershipRate > 0)
+                checkRate = 1f / checkMembershipRate;
+
             handlerCount = new int[eventCount];
             handlers = new Component[eventCount][];
             handlerEvents = new string[eventCount][];
@@ -74,15 +80,25 @@ namespace Texel
 
             if (Utilities.IsValid(zone))
             {
-                if (!Utilities.IsValid(triggerZone) || zone == triggerZone) {
+                if (!Utilities.IsValid(triggerZone) || zone == triggerZone)
+                {
                     zone._Register(ZoneTrigger.EVENT_PLAYER_ENTER, this, "_PlayerTriggerEnter", "playerEventArg");
                     zone._Register(ZoneTrigger.EVENT_PLAYER_LEAVE, this, "_PlayerTriggerExit", "playerEventArg");
+
+                    if (zone._PlayerPositionInZone(Networking.LocalPlayer))
+                        _AddLocalPlayer();
                 }
                 else
                 {
                     zone._Register(ZoneTrigger.EVENT_PLAYER_LEAVE, this, "_PlayerTriggerExit", "playerEventArg");
                     triggerZone._Register(ZoneTrigger.EVENT_PLAYER_ENTER, this, "_PlayerTriggerEnter", "playerEventArg");
+
+                    if (triggerZone._PlayerPositionInZone(Networking.LocalPlayer))
+                        _AddLocalPlayer();
                 }
+
+                if (checkRate > 0)
+                    _InternalCheckMembership();
             }
         }
 
@@ -98,11 +114,19 @@ namespace Texel
             handlerCount += 1;
         } */
 
-        /* public override void OnPlayerJoined(VRCPlayerApi player)
+        public override void OnPlayerJoined(VRCPlayerApi player)
         {
             if (worldEvents)
-                _AddPlayer(player);
-        } */
+            {
+                if (triggerZone)
+                {
+                    if (triggerZone._PlayerPositionInZone(player))
+                        _AddPlayer(player);
+                }
+                else if (zone && zone._PlayerPositionInZone(player))
+                    _AddPlayer(player);
+            }
+        }
 
         public override void OnPlayerLeft(VRCPlayerApi player)
         {
@@ -132,6 +156,8 @@ namespace Texel
 
         public int _AddPlayer(VRCPlayerApi player)
         {
+            _EnsureInit();
+
             if (!Utilities.IsValid(player))
                 return -1;
 
@@ -159,6 +185,8 @@ namespace Texel
 
         public bool _RemovePlayer(VRCPlayerApi player)
         {
+            _EnsureInit();
+
             if (!Utilities.IsValid(player))
                 return false;
 
@@ -323,6 +351,33 @@ namespace Texel
 
             newArr.SetValue(elem, count);
             return newArr;
+        }
+
+        int checkIndex = 0;
+        public void _InternalCheckMembership()
+        {
+            _CheckNextMember();
+            SendCustomEventDelayedSeconds(nameof(_InternalCheckMembership), checkRate);
+        }
+
+        void _CheckNextMember()
+        {
+            if (checkIndex > maxIndex)
+            {
+                checkIndex = 0;
+                if (maxIndex == 0)
+                    return;
+            }
+
+            int playerId = players[checkIndex];
+            VRCPlayerApi player = VRCPlayerApi.GetPlayerById(playerId);
+
+            bool removed = false;
+            if (!zone._PlayerPositionInZone(player))
+                removed = _RemovePlayer(player);
+
+            if (!removed)
+                checkIndex += 1;
         }
     }
 }

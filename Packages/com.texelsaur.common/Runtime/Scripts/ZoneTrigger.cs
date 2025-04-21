@@ -22,6 +22,8 @@ namespace Texel
         [Tooltip("Variable in remote script to write player reference before calling an enter or leave event.  Leave blank to not set player reference.")]
         public string playerTargetVariable;
 
+        Collider[] cachedColliders;
+
         public const int EVENT_PLAYER_ENTER = 0;
         public const int EVENT_PLAYER_LEAVE = 1;
         const int EVENT_COUNT = 2;
@@ -37,6 +39,8 @@ namespace Texel
 
         protected override void _Init()
         {
+            cachedColliders = GetComponents<Collider>();
+
             if (configureEvents)
             {
                 if (Utilities.IsValid(targetBehavior) && playerEnterEvent != null && playerEnterEvent != "")
@@ -84,6 +88,32 @@ namespace Texel
                 return false;
 
             return triggered;
+        }
+
+        public virtual bool _PlayerPositionInZone(VRCPlayerApi player, float radius = 0)
+        {
+            _EnsureInit();
+
+            if (!Utilities.IsValid(player))
+                return false;
+
+            Vector3 pos = player.GetPosition();
+
+            foreach (var c in cachedColliders) { 
+                if (!c.enabled)
+                    continue;
+
+                Vector3 closest = c.ClosestPoint(pos);
+                if ((closest - pos).sqrMagnitude < radius + Mathf.Epsilon)
+                    return true;
+            }
+
+            return false;
+        }
+
+        public virtual bool _PlayerPositionInZoneTriggering(VRCPlayerApi player, float radius = 0)
+        {
+            return _PlayerPositionInZone(player, radius);
         }
     }
 }

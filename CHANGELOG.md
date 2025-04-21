@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.5.8] - 04-21-25
+
+- Added _PlayerPositionInZone and _PlayerPositionInZoneTrigger methods to ZoneTrigger
+- ZoneMembership will check membership on world join if World Events is checked
+- ZoneMembership can check membership validity on an interval to remove invalid members
+
 ## [1.5.7] - 04-10-25
 
 - Fixed SyncPlayerList not adding to correct slots when autocompact is turned off
