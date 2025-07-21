@@ -6,6 +6,12 @@ using VRC.Udon;
 
 namespace Texel
 {
+    public enum ZoneTriggerMode
+    {
+        CapsuleTrigger,
+        Position,
+    }
+
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class ZoneTrigger : EventBase
     {
@@ -22,7 +28,7 @@ namespace Texel
         [Tooltip("Variable in remote script to write player reference before calling an enter or leave event.  Leave blank to not set player reference.")]
         public string playerTargetVariable;
 
-        Collider[] cachedColliders;
+        protected Collider[] cachedColliders;
 
         public const int EVENT_PLAYER_ENTER = 0;
         public const int EVENT_PLAYER_LEAVE = 1;
@@ -48,6 +54,11 @@ namespace Texel
                 if (Utilities.IsValid(targetBehavior) && playerLeaveEvent != null && playerLeaveEvent != "")
                     _Register(EVENT_PLAYER_LEAVE, targetBehavior, playerLeaveEvent, playerTargetVariable);
             }
+        }
+
+        public virtual bool IsTracking
+        {
+            get { return false; }
         }
 
         public override void OnPlayerTriggerEnter(VRCPlayerApi player)
@@ -88,6 +99,14 @@ namespace Texel
                 return false;
 
             return triggered;
+        }
+
+        public virtual bool _PlayerInZone(VRCPlayerApi player)
+        {
+            if (player == Networking.LocalPlayer)
+                return triggered;
+
+            return false;
         }
 
         public virtual bool _PlayerPositionInZone(VRCPlayerApi player, float radius = 0)
