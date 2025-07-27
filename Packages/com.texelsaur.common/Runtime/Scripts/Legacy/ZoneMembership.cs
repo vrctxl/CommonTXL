@@ -8,6 +8,7 @@ using VRC.Udon;
 namespace Texel
 {
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
+    [Obsolete("Use Tracked Zone Trigger if you need to track membership within a Zone Trigger")]
     public class ZoneMembership : UdonSharpBehaviour
     {
         [Tooltip("Optional zone that the membership list will hook into for player leave events")]

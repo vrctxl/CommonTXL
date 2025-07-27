@@ -6,7 +6,7 @@
     "email": "",
     "url": "https://texelsaurus.com"
   },
-  "version": "1.5.8",
+  "version": "1.6.0",
   "description": "Common components and base classes for TXL projects",
   "gitDependencies": {},
   "vpmDependencies": {},

@@ -1,26 +1,32 @@
 ﻿
+using System.Runtime.CompilerServices;
 using UdonSharp;
 using UnityEngine;
 using VRC.SDK3.Data;
 using VRC.SDKBase;
 using VRC.Udon;
 
+[assembly: InternalsVisibleTo("com.texelsaur.common.Editor")]
+
 namespace Texel
 {
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class TrackedZoneTrigger : ZoneTrigger
     {
-        [SerializeField] protected internal ZoneTriggerMode triggerMode;
-        [SerializeField] protected internal float positionRadius = 0;
+        [SerializeField] protected internal ZoneTriggerMode triggerMode = ZoneTriggerMode.Position;
+        [SerializeField] protected internal float positionRadius = 0.1f;
         [SerializeField] protected internal float monitorTriggerInterval = 0.1f;
-        [SerializeField] protected internal float membershipCheckRate = 5f;
-        [SerializeField] protected internal float addCheckRate = 0f;
+        [SerializeField] protected internal bool checkForRemove = true;
+        [SerializeField] protected internal float removeCheckInterval = 5f;
+        [SerializeField] protected internal bool checkForAdd = false;
+        [SerializeField] protected internal float addCheckInterval = 5f;
 
         protected DataDictionary trackingData;
-        protected DataDictionary monitoringAdd;
-        protected DataDictionary monitoringRemove;
+        protected DataDictionary monitoring;
 
         private bool monitorQueued = false;
+        private int playerCount = 1;
+        private int trackingCount = 0;
 
         // Used for checking if players are still within the zone
         private DataList trackedCheckList;
@@ -35,19 +41,18 @@ namespace Texel
             base._Init();
 
             trackingData = new DataDictionary();
-            monitoringAdd = new DataDictionary();
-            monitoringRemove = new DataDictionary();
+            monitoring = new DataDictionary();
 
-            if (membershipCheckRate > 0)
+            if (checkForRemove && removeCheckInterval > 0)
             {
-                trackedCheckInterval = 1f / membershipCheckRate;
-                _InternalCheckMembership();
+                trackedCheckInterval = 1f / removeCheckInterval;
+                SendCustomEventDelayedSeconds(nameof(_InternalCheckMembership), trackedCheckInterval * Random.value);
             }
 
-            if (addCheckRate > 0)
+            if (checkForAdd && addCheckInterval > 0)
             {
-                playerCheckInterval = 1f / addCheckRate;
-                _InternalCheckAdd();
+                playerCheckInterval = 1f / addCheckInterval;
+                SendCustomEventDelayedSeconds(nameof(_InternalCheckAdd), playerCheckInterval * Random.value);
             }
         }
 
@@ -56,12 +61,51 @@ namespace Texel
             get { return true; }
         }
 
+        // Tracked players are players last known to be within the zone.  If players have entered or exited the zone without causing native
+        // triggers to fire, tracking may be inaccurate until periodic membership scanning happens.
+        public virtual int TrackedPlayerCount
+        {
+            get { return trackingData.Count; }
+        }
+
+        // Monitored players are players that triggered native collisions with the zone but don't actually meet the position threshold to be
+        // added or removed.  These players are continuously checked at a higher rate until their position is consistent with the original trigger event.
+        public virtual int MonitoringPlayerCount
+        {
+            get { return monitoring.Count; }
+        }
+
+        public override bool _PlayerInZone(VRCPlayerApi player)
+        {
+            return trackingData.ContainsKey(player.playerId);
+        }
+
+        public virtual DataList _GetTrackedPlayers()
+        {
+            return trackingData.GetValues();
+        }
+
+        public override void OnPlayerJoined(VRCPlayerApi player)
+        {
+            base.OnPlayerJoined(player);
+
+            if (Utilities.IsValid(player) && triggerMode == ZoneTriggerMode.Position)
+            {
+                if (!localPlayerOnly || player.isLocal)
+                    _CheckedAddPlayer(player);
+            }
+
+            playerCount = VRCPlayerApi.GetPlayerCount();
+        }
+
         public override void OnPlayerLeft(VRCPlayerApi player)
         {
             base.OnPlayerLeft(player);
 
             if (Utilities.IsValid(player))
-                _RemovePlayer(player);  
+                _RemovePlayer(player);
+
+            playerCount = VRCPlayerApi.GetPlayerCount();
         }
 
         public override void _PlayerTriggerEnter(VRCPlayerApi player)
@@ -102,7 +146,7 @@ namespace Texel
         {
             if (!_PlayerPositionInZoneTriggering(player, positionRadius))
             {
-                if (trackingData.ContainsKey(player.displayName))
+                if (trackingData.ContainsKey(player.playerId))
                     _RemovePlayer(player);
 
                 if (triggered)
@@ -116,24 +160,24 @@ namespace Texel
 
         protected void _AddPlayer(VRCPlayerApi player)
         {
-            string name = player.displayName;
+            int playerId = player.playerId;
 
-            if (!trackingData.ContainsKey(name))
+            monitoring.Remove(playerId);
+
+            if (!trackingData.ContainsKey(playerId))
             {
-                trackingData.Add(name, player.playerId);
+                trackingData.Add(playerId, new DataToken(player));
+                trackingCount = trackingData.Count;
 
                 _UpdateHandlers(EVENT_PLAYER_ENTER, player);
             }
-
-            if (monitoringRemove.ContainsKey(name))
-                monitoringRemove.Remove(name);
         }
 
         protected void _CheckedRemovePlayer(VRCPlayerApi player, bool triggered = false)
         {
             if (_PlayerPositionInZoneTriggering(player, positionRadius))
             {
-                if (!trackingData.ContainsKey(player.displayName))
+                if (!trackingData.ContainsKey(player.playerId))
                     _AddPlayer(player);
 
                 if (triggered)
@@ -147,32 +191,22 @@ namespace Texel
 
         protected void _RemovePlayer(VRCPlayerApi player)
         {
-            string name = player.displayName;
+            int playerId = player.playerId;
 
-            if (trackingData.ContainsKey(name))
+            monitoring.Remove(playerId);
+
+            if (trackingData.ContainsKey(playerId))
             {
-                trackingData.Remove(name);
+                trackingData.Remove(playerId);
+                trackingCount = trackingData.Count;
 
                 _UpdateHandlers(EVENT_PLAYER_LEAVE, player);
             }
-
-            if (monitoringAdd.ContainsKey(name))
-                monitoringAdd.Remove(name);
         }
 
         protected void _MonitorPlayer(VRCPlayerApi player, bool add)
         {
-            string name = player.displayName;
-
-            if (add)
-            {
-                if (!monitoringAdd.ContainsKey(name))
-                    monitoringAdd.Add(name, player.playerId);
-            } else
-            {
-                if (!monitoringRemove.ContainsKey(name))
-                    monitoringRemove.Add(name, player.playerId);
-            }
+            monitoring.SetValue(player.playerId, add ? 1 : -1);
 
             if (!monitorQueued)
             {
@@ -185,59 +219,40 @@ namespace Texel
         {
             monitorQueued = false;
 
-            foreach (var token in monitoringAdd.GetKeys())
-            {
-                string name = token.String;
-                bool clear = false;
+            int count = monitoring.Count;
+            DataList monitorKeys = monitoring.GetKeys();
 
-                if (monitoringAdd.TryGetValue(name, out DataToken idToken))
+           for (int i = 0; i < count; i++)
+           {
+                if (monitorKeys.TryGetValue(i, out DataToken token))
                 {
-                    VRCPlayerApi player = VRCPlayerApi.GetPlayerById(idToken.Int);
-                    if (Utilities.IsValid(player))
+                    int playerId = token.Int;
+                    bool clear = true;
+
+                    if (monitoring.TryGetValue(playerId, out DataToken actionToken))
                     {
-                        if (_PlayerPositionInZoneTriggering(player, positionRadius))
+                        int action = actionToken.Int;
+                        bool isAdd = action > 0;
+
+                        VRCPlayerApi player = VRCPlayerApi.GetPlayerById(playerId);
+                        if (Utilities.IsValid(player))
                         {
-                            _AddPlayer(player);
-                            clear = true;
+                            bool inZone = _PlayerPositionInZoneTriggering(player, positionRadius);
+                            if (isAdd && inZone)
+                                _AddPlayer(player);
+                            else if (!isAdd && !inZone)
+                                _RemovePlayer(player);
+                            else
+                                clear = false;
                         }
                     }
-                    else
-                        clear = true;
-                }
-                else
-                    clear = true;
 
-                if (clear)
-                    monitoringAdd.Remove(name);
+                    if (clear)
+                        monitoring.Remove(playerId);
+                }
             }
 
-            foreach (var token in monitoringRemove.GetKeys())
-            {
-                string name = token.String;
-                bool clear = false;
-
-                if (monitoringRemove.TryGetValue(name, out DataToken idToken))
-                {
-                    VRCPlayerApi player = VRCPlayerApi.GetPlayerById(idToken.Int);
-                    if (Utilities.IsValid(player))
-                    {
-                        if (!_PlayerPositionInZoneTriggering(player, positionRadius))
-                        {
-                            _RemovePlayer(player);
-                            clear = true;
-                        }
-                    }
-                    else
-                        clear = true;
-                }
-                else
-                    clear = true;
-
-                if (clear)
-                    monitoringRemove.Remove(name);
-            }
-
-            if (monitoringAdd.Count > 0 || monitoringRemove.Count > 0)
+            if (monitoring.Count > 0)
             {
                 monitorQueued = true;
                 SendCustomEventDelayedSeconds(nameof(_InternalOnMonitorUpdate), monitorTriggerInterval);
@@ -248,7 +263,9 @@ namespace Texel
         public void _InternalCheckMembership()
         {
             _CheckNextMember();
-            SendCustomEventDelayedSeconds(nameof(_InternalCheckMembership), trackedCheckInterval);
+
+            float interval = trackingCount > 0 ? removeCheckInterval / trackingCount : removeCheckInterval;
+            SendCustomEventDelayedSeconds(nameof(_InternalCheckMembership), interval);
         }
 
         void _CheckNextMember()
@@ -265,17 +282,13 @@ namespace Texel
                     return;
             }
 
-            if (trackedCheckList.TryGetValue(trackedCheckIndex, out DataToken nameToken))
+            if (trackedCheckList.TryGetValue(trackedCheckIndex, out DataToken idToken))
             {
-                string name = nameToken.String;
-                if (trackingData.TryGetValue(name, out DataToken idToken))
-                {
-                    int playerId = idToken.Int;
-                    VRCPlayerApi player = VRCPlayerApi.GetPlayerById(playerId);
+                int playerId = idToken.Int;
+                VRCPlayerApi player = VRCPlayerApi.GetPlayerById(playerId);
 
-                    if (Utilities.IsValid(player))
-                        _CheckedRemovePlayer(player, false);
-                }
+                if (Utilities.IsValid(player))
+                    _CheckedRemovePlayer(player, false);
             }
 
             trackedCheckIndex += 1;
@@ -285,7 +298,9 @@ namespace Texel
         public void _InternalCheckAdd()
         {
             _CheckNextPlayer();
-            SendCustomEventDelayedSeconds(nameof(_InternalCheckAdd), playerCheckInterval);
+
+            float interval = addCheckInterval / playerCount;
+            SendCustomEventDelayedSeconds(nameof(_InternalCheckAdd), interval);
         }
 
         void _CheckNextPlayer()
@@ -309,7 +324,7 @@ namespace Texel
             }
 
             VRCPlayerApi player = playerCheckList[playerCheckIndex];
-            if (Utilities.IsValid(player) && !trackingData.ContainsKey(player.displayName))
+            if (Utilities.IsValid(player) && !trackingData.ContainsKey(player.playerId))
                 _CheckedAddPlayer(player, false);
 
             playerCheckIndex += 1;

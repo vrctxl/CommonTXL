@@ -1,4 +1,5 @@
 ﻿
+using System;
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
@@ -93,6 +94,7 @@ namespace Texel
             _UpdateHandlers(EVENT_PLAYER_LEAVE, player);
         }
 
+        [Obsolete("Use _PlayerInZone")]
         public virtual bool _LocalPlayerInZone()
         {
             if (!localPlayerOnly)
@@ -117,6 +119,7 @@ namespace Texel
                 return false;
 
             Vector3 pos = player.GetPosition();
+            pos.y += radius;
 
             foreach (var c in cachedColliders) { 
                 if (!c.enabled)
