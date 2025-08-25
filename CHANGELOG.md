@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.1] - 08-25-25
+- Possible fix for Unity not being able to find legacy U# scripts
+
+## [1.6.0] - 07-27-25
+- Added TrackedZoneTrigger script, usable whereever ZoneTrigger is expected
+- CompoundZoneTrigger and ZoneMembership considered legacy
+
 ## [1.5.8] - 04-21-25
 
 - Added _PlayerPositionInZone and _PlayerPositionInZoneTrigger methods to ZoneTrigger

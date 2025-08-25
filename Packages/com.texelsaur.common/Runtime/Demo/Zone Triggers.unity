@@ -1631,9 +1631,9 @@ MonoBehaviour:
   positionRadius: 0.1
   monitorTriggerInterval: 0.1
   checkForRemove: 1
-  membershipCheckRate: 1
+  removeCheckInterval: 5
   checkForAdd: 0
-  addCheckRate: 1
+  addCheckInterval: 5
 --- !u!1 &1966231534 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 4448673834195557149, guid: 1ac75656e384b784585721b4a65133ad,
