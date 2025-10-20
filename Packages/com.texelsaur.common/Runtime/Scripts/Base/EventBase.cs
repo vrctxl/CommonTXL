@@ -16,6 +16,8 @@ namespace Texel
         protected string[][] handlerArg2;
 
         bool init = false;
+        bool initDone = false;
+        bool postInitDone = false;
         bool handlersInit = false;
         int handlerUpdateLevel = 0;
 
@@ -34,6 +36,8 @@ namespace Texel
             _InitHandlers();
             _Init();
 
+            initDone = true;
+
             SendCustomEventDelayedFrames(nameof(_InternalPostInit), 1);
         }
 
@@ -46,11 +50,18 @@ namespace Texel
         public void _InternalPostInit()
         {
             _PostInit();
+
+            postInitDone = true;
         }
 
-        protected bool Initialized
+        public bool Initialized
         {
-            get { return init; }
+            get { return initDone; }
+        }
+
+        public bool PostInitialized
+        {
+            get { return postInitDone; }
         }
 
         protected void _InitHandlers()

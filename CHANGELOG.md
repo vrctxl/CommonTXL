@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.7.0] - 10-17-25
+- Added public Initialized and PostInitialized properties to EventBase
+- Added ImageDownloadManager
+
 ## [1.6.1] - 08-25-25
 - Possible fix for Unity not being able to find legacy U# scripts
 
