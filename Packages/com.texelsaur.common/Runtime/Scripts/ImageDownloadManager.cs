@@ -52,6 +52,15 @@ namespace Texel
 
         protected override int EventCount => EVENT_COUNT;
 
+        private void OnDestroy()
+        {
+            if (imageDownloader != null)
+            {
+                imageDownloader.Dispose();
+                imageDownloader = null;
+            }
+        }
+
         public override void OnImageLoadSuccess(IVRCImageDownload result)
         {
             _DebugLog($"Image loaded: url={result.Url.Get()}, state={result.State}, size={result.SizeInMemoryBytes}");

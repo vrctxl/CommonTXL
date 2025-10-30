@@ -65,23 +65,33 @@ namespace Texel
         // triggers to fire, tracking may be inaccurate until periodic membership scanning happens.
         public virtual int TrackedPlayerCount
         {
-            get { return trackingData.Count; }
+            get 
+            {
+                _EnsureInit();
+                return trackingData.Count; 
+            }
         }
 
         // Monitored players are players that triggered native collisions with the zone but don't actually meet the position threshold to be
         // added or removed.  These players are continuously checked at a higher rate until their position is consistent with the original trigger event.
         public virtual int MonitoringPlayerCount
         {
-            get { return monitoring.Count; }
+            get 
+            {
+                _EnsureInit();
+                return monitoring.Count; 
+            }
         }
 
         public override bool _PlayerInZone(VRCPlayerApi player)
         {
+            _EnsureInit();
             return trackingData.ContainsKey(player.playerId);
         }
 
         public virtual DataList _GetTrackedPlayers()
         {
+            _EnsureInit();
             return trackingData.GetValues();
         }
 
@@ -110,6 +120,7 @@ namespace Texel
 
         public override void _PlayerTriggerEnter(VRCPlayerApi player)
         {
+            _EnsureInit();
             if (!Utilities.IsValid(player))
                 return;
 
@@ -127,6 +138,7 @@ namespace Texel
 
         public override void _PlayerTriggerExit(VRCPlayerApi player)
         {
+            _EnsureInit();
             if (!Utilities.IsValid(player))
                 return;
 

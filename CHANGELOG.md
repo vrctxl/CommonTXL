@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.7.1] - 10-27-25
+- Fixed missing OnDestroy in ImageDownloadManager leaking VRCImageDownloader
+- Added init checks to some TrackedZoneTrigger methods
+- Added undo support to some menu util functions
+
 ## [1.7.0] - 10-17-25
 - Added public Initialized and PostInitialized properties to EventBase
 - Added ImageDownloadManager
