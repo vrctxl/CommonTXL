@@ -1,5 +1,8 @@
 # Changelog
 
+## [1.7.2] - 11-06-25
+- Removed invalid rootNamespace entry from asmdefs
+
 ## [1.7.1] - 10-27-25
 - Fixed missing OnDestroy in ImageDownloadManager leaking VRCImageDownloader
 - Added init checks to some TrackedZoneTrigger methods

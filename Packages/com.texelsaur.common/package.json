@@ -6,11 +6,11 @@
     "email": "",
     "url": "https://texelsaurus.com"
   },
-  "version": "1.7.1",
+  "version": "1.7.2",
   "description": "Common components and base classes for TXL projects",
   "gitDependencies": {},
   "vpmDependencies": {
-  	"com.vrchat.worlds" : "^3.8.0"
+    "com.vrchat.worlds": "^3.8.0"
   },
   "legacyFolders": {
     "Assets\\Texel\\Common": "4b7c604a04100044fa7a6bc20b864417",

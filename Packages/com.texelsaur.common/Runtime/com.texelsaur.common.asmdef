@@ -1,6 +1,5 @@
 {
     "name": "com.texelsaur.common",
-    "rootNamespace": "",
     "references": [
         "VRC.SDK3",
         "VRC.SDKBase",
