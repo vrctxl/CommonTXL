@@ -33,7 +33,7 @@ namespace Texel
                 GameObject instance = (GameObject)PrefabUtility.InstantiatePrefab(asset);
                 Undo.RegisterCreatedObjectUndo(instance, "Instantiate Prefab");
                 Undo.RecordObject(instance, "Rename Instance");
-                instance.name = GetUniqueName(instance.name, instance.scene);
+                instance.name = GetUniqueName(instance.name, instance.scene, instance.transform);
 
                 EditorUtility.SetDirty(instance);
                 EditorGUIUtility.PingObject(instance);
@@ -71,7 +71,7 @@ namespace Texel
             instance.transform.localPosition = Vector3.zero;
             instance.transform.localRotation = Quaternion.identity;
             instance.transform.localScale = Vector3.one;
-            instance.name = GetUniqueName(instance.name, instance.transform.parent);
+            instance.name = GetUniqueName(instance.name, instance.transform.parent, instance.transform);
 
             EditorUtility.SetDirty(instance);
             EditorUtility.SetDirty(instance.transform);
@@ -99,26 +99,32 @@ namespace Texel
             return Selection.activeTransform.gameObject;
         }
 
-        public static string GetUniqueName(string baseName, Transform parent)
+        public static string GetUniqueName(string baseName, Transform parent, Transform exclude = null)
         {
             if (parent == null)
                 return baseName;
 
             HashSet<string> siblingNames = new HashSet<string>();
             foreach (Transform child in parent)
-                siblingNames.Add(child.name);
+            {
+                if (!exclude || child != exclude)
+                    siblingNames.Add(child.name);
+            }
 
             return GetUniqueName(baseName, siblingNames);
         }
 
-        public static string GetUniqueName(string baseName, Scene scene)
+        public static string GetUniqueName(string baseName, Scene scene, Transform exclude = null)
         {
             if (scene == null)
                 return baseName;
 
             HashSet<string> siblingNames = new HashSet<string>();
             foreach (GameObject obj in scene.GetRootGameObjects())
-                siblingNames.Add(obj.name);
+            {
+                if (!exclude || obj.transform != exclude)
+                    siblingNames.Add(obj.name);
+            }
 
             return GetUniqueName(baseName, siblingNames);
         }

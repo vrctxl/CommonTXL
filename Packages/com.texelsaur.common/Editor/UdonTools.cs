@@ -17,7 +17,7 @@ namespace Texel
     [InitializeOnLoad]
     public class UdonTools
     {
-        [MenuItem("Tools/TXL/Udon Tools/Remove Orphan Behaviours", false, 200)]
+        [MenuItem("Tools/TXL/Udon Tools/Remove Orphan Behaviours", false, 1000)]
         public static void RemoveOrphanBehaviours()
         {
             Transform t = Selection.activeTransform;

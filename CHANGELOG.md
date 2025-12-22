@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.7.3] - 12-22-25
+- Fixed unique name generation to not add redundant (1)
+- Added 'Reimport Scripts' tool under Tools->TXL to fix not found CS errors
+
 ## [1.7.2] - 11-06-25
 - Removed invalid rootNamespace entry from asmdefs
 

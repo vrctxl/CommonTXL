@@ -1,9 +1,11 @@
-﻿
-using System;
+﻿using System;
+using System.Runtime.CompilerServices;
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
 using VRC.Udon;
+
+[assembly: InternalsVisibleTo("com.texelsaur.common.Editor")]
 
 namespace Texel
 {
