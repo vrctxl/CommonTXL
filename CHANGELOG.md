@@ -1,5 +1,8 @@
 # Changelog
 
+## [1.7.4] - 12-26-25
+- Added ImageDownloadQuad, a sample script and prefab for using ImageDownloadManager
+
 ## [1.7.3] - 12-22-25
 - Fixed unique name generation to not add redundant (1)
 - Added 'Reimport Scripts' tool under Tools->TXL to fix not found CS errors
