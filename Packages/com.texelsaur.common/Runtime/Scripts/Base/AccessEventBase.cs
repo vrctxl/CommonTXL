@@ -40,7 +40,12 @@ namespace Texel
             return requesterCheck && requesteeCheck;
         }
 
-        protected string OwnerName
+        public string ComponentName
+        {
+            get { return componentName; }
+        }
+
+        public string OwnerName
         {
             get
             {

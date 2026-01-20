@@ -72,6 +72,14 @@ namespace Texel
             imageClaim = downloadManager._RequestImage(url, this, nameof(_InternalOnImageReady));
         }
 
+        public bool _RefreshImage()
+        {
+            if (!downloadManager || imageClaim <= 0)
+                return false;
+
+            return downloadManager._RefreshImage(imageClaim);
+        }
+
         public void _InternalOnImageReady()
         {
             image = downloadManager.CurrentImage;
@@ -80,7 +88,7 @@ namespace Texel
 
         public void _ReleaseImage()
         {
-            if (imageClaim <= 0)
+            if (!downloadManager || imageClaim <= 0)
                 return;
 
             image = null;

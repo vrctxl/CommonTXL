@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.5] - 01-20-25
+- Exposed OwnerName and ComponentName in AccessEventBase
+- Fixed exception in _ReleaseImage(claimToken) in ImageDownloadManager
+- Added _RefreshImage(url) and _RefreshImage(claimToken) ImageDownloadManager
+- Added _RefreshImages() to ImageDownloadManager to refresh all managed images
+- Added _RefreshImage to ImageDownloadQuad
+
 ## [1.7.4] - 12-26-25
 - Added ImageDownloadQuad, a sample script and prefab for using ImageDownloadManager
 

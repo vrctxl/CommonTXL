@@ -38,6 +38,24 @@ namespace Texel
         public const int EVENT_IMAGE_DISPOSED = 2;
         const int EVENT_COUNT = 3;
 
+        // requestQueue Structure:
+        // [ DataToken(VRCUrl), ... ]
+
+        // imageData Structure:
+        // { urlstr: {
+        //     state: STATE_QUEUED / STATE_DOWNLOADING / STATE_AVAILABLE / STATE_ERROR,
+        //     url: DataToken(VRCUrl),
+        //     claims: [ int, ... ],
+        //     image: DataToken(IVRCImageDownload),
+        // }, ... }
+
+        // claims Structure:
+        // { int: {
+        //     url: DataToken(VRCUrl),
+        //     handler: DataToken(Component),
+        //     event: string,
+        // }, ... }
+
         protected override void _Init()
         {
             imageDownloader = new VRCImageDownloader();
@@ -123,6 +141,7 @@ namespace Texel
             {
                 infoObj = new DataDictionary();
                 infoObj["state"] = STATE_QUEUED;
+                infoObj["url"] = urlToken;
                 infoObj["claims"] = new DataList();
 
                 imageData[url.Get()] = infoObj;
@@ -157,11 +176,75 @@ namespace Texel
         public virtual void _ReleaseImage(int claimToken)
         {
             _EnsureInit();
-            if (claims.TryGetValue(claimToken, out var urlToken))
+            if (claims.TryGetValue(claimToken, out var claimInfoToken))
             {
-                claims.Remove(claimToken);
-                _ReleaseImage(claimToken, (VRCUrl)urlToken.Reference);
+                DataDictionary claimInfo = claimInfoToken.DataDictionary;
+                if (claimInfo.TryGetValue("url", out var urlToken))
+                {
+                    claims.Remove(claimToken);
+                    _ReleaseImage(claimToken, (VRCUrl)urlToken.Reference);
+                }
             }
+        }
+
+        public virtual void _RefreshImages()
+        {
+            _EnsureInit();
+
+            DataList urls = imageData.GetKeys();
+            _DebugLog($"Refreshing {urls.Count} images");
+
+            for (int i = 0; i < urls.Count; i++)
+            {
+                if (imageData.TryGetValue(urls[i], out var infoToken))
+                {
+                    DataDictionary infoObj = infoToken.DataDictionary;
+                    if (infoObj.TryGetValue("url", out var urlToken))
+                        _RefreshImage((VRCUrl)urlToken.Reference);
+                }
+            }
+        }
+
+        public virtual bool _RefreshImage(VRCUrl url)
+        {
+            _EnsureInit();
+            if (url == null || url == VRCUrl.Empty)
+                return false;
+
+            DataToken urlToken = new DataToken(url);
+            _DebugLog($"Refreshing {url.ToString()}");
+
+            DataDictionary infoObj;
+            if (imageData.TryGetValue(url.Get(), out var infoToken))
+                infoObj = infoToken.DataDictionary;
+            else
+                return false;
+
+            DataToken state = infoObj["state"];
+            if (state == STATE_QUEUED || state == STATE_DOWNLOADING)
+                return true;
+
+            infoObj["state"] = STATE_QUEUED;
+            if (!requestQueue.Contains(urlToken))
+            {
+                requestQueue.Add(urlToken);
+                _DownloadNextImage();
+            }
+
+            return true;
+        }
+
+        public virtual bool _RefreshImage(int claimToken)
+        {
+            _EnsureInit();
+            if (claims.TryGetValue(claimToken, out var claimInfoToken))
+            {
+                DataDictionary claimInfo = claimInfoToken.DataDictionary;
+                if (claimInfo.TryGetValue("url", out var urlToken))
+                    return _RefreshImage((VRCUrl)urlToken.Reference);
+            }
+
+            return false;
         }
 
         private void _ImageLoadEvent(IVRCImageDownload result, bool error)
@@ -198,13 +281,8 @@ namespace Texel
             {
                 DataDictionary infoObj = infoToken.DataDictionary;
                 infoObj["state"] = STATE_DOWNLOADING;
-
                 if (infoObj.TryGetValue("image", out var imageToken))
-                {
-                    IVRCImageDownload image = (IVRCImageDownload)imageToken.Reference;
-                    image.Dispose();
-                }
-
+                    infoObj["prevImage"] = imageToken;
                 infoObj["image"] = new DataToken(download);
             }
         }
@@ -223,6 +301,16 @@ namespace Texel
 
                 for (int i = 0; i < infoClaims.Count; i++)
                     _DispatchImage(imageDownload, infoClaims[i].Int);
+
+                // Dispose previously held image, if it exists
+                if (infoObj.TryGetValue("prevImage", out var prevImageToken))
+                {
+                    _DebugLog($"Disposing previous image for {imageDownload.Url}");
+                    IVRCImageDownload image = (IVRCImageDownload)prevImageToken.Reference;
+                    image.Dispose();
+
+                    infoObj.Remove("prevImage");
+                }
             }
         }
 
