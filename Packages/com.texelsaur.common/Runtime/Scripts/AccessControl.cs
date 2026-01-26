@@ -42,7 +42,9 @@ namespace Texel
         public AccessControlHandler[] accessHandlers;
 
         [UdonSynced]
-        private string syncFirstJoin;
+        private string syncFirstJoin = "";
+        [UdonSynced]
+        private int syncFirstJoinId = -1;
 
         bool _localPlayerWhitelisted = false;
         bool _localPlayerMaster = false;
@@ -87,6 +89,7 @@ namespace Texel
                         _localPlayerFirstJoin = true;
 
                         syncFirstJoin = player.displayName;
+                        syncFirstJoinId = player.playerId;
                         RequestSerialization();
                     }
                 }
@@ -96,7 +99,10 @@ namespace Texel
             }
 
             if (Utilities.IsValid(debugState))
-                debugState._Regsiter(this, "_UpdateDebugState", "AccessControl");
+            {
+                debugState._Register(DebugState.EVENT_UPDATE, this, nameof(_UpdateDebugState));
+                debugState._SetContext(this, nameof(_UpdateDebugState), "AccessControl");
+            }
 
             DebugLog("Setting up access");
             if (allowInstanceOwner)
@@ -130,6 +136,31 @@ namespace Texel
                         source._Register(AccessControlHandler.EVENT_REVALIDATE, this, nameof(_RefreshAccessHandlerCheck));
                 }
             }
+        }
+
+        public VRCPlayerApi InstanceOwner
+        {
+            get { return foundInstanceOwner; }
+        }
+
+        public VRCPlayerApi Master
+        {
+            get { return foundMaster; }
+        }
+
+        public VRCPlayerApi FirstJoin
+        {
+            get
+            {
+                if (syncFirstJoinId >= 0)
+                    return VRCPlayerApi.GetPlayerById(syncFirstJoinId);
+                return null;
+            }
+        }
+
+        public string FirstJoinName
+        {
+            get { return syncFirstJoin; }
         }
 
         public void _AddUserSource(AccessControlUserSource source)
@@ -197,6 +228,9 @@ namespace Texel
         void _SearchInstanceOwner()
         {
             int playerCount = VRCPlayerApi.GetPlayerCount();
+            if (playerCount > _playerBuffer.Length)
+                _playerBuffer = (VRCPlayerApi[])UtilityTxl.ArrayMinSize(_playerBuffer, playerCount, typeof(VRCPlayerApi));
+
             _playerBuffer = VRCPlayerApi.GetPlayers(_playerBuffer);
 
             _worldHasOwner = false;
