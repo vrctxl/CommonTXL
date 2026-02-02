@@ -20,6 +20,7 @@ namespace Texel
         bool postInitDone = false;
         bool handlersInit = false;
         int handlerUpdateLevel = 0;
+        bool suppress = false;
 
         protected DebugLog eventDebugLog;
 
@@ -62,6 +63,12 @@ namespace Texel
         public bool PostInitialized
         {
             get { return postInitDone; }
+        }
+
+        public bool SuppressEvents
+        {
+            get { return suppress; }
+            set { suppress = value; }
         }
 
         protected void _InitHandlers()
@@ -178,7 +185,7 @@ namespace Texel
 
         protected void _UpdateHandlers(int eventIndex)
         {
-            if (handlerCount == null)
+            if (handlerCount == null || suppress)
                 return;
 
             if (eventIndex < 0 || eventIndex >= handlerCount.Length)
@@ -265,7 +272,7 @@ namespace Texel
         [RecursiveMethod]
         protected void _UpdateHandlers(int eventIndex, object arg1)
         {
-            if (handlerCount == null)
+            if (handlerCount == null || suppress)
                 return;
 
             if (eventIndex < 0 || eventIndex >= handlerCount.Length)

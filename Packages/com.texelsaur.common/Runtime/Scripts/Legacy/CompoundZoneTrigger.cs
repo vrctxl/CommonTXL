@@ -4,7 +4,7 @@ using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
 
-[assembly: InternalsVisibleTo("com.texelsaur.video.Editor")]
+[assembly: InternalsVisibleTo("com.texelsaur.common.Editor")]
 
 namespace Texel
 {
@@ -103,7 +103,7 @@ namespace Texel
 
         public override void _PlayerTriggerEnter(VRCPlayerApi player)
         {
-            if (!localPlayerOnly)
+            if (playerType != ZonePlayerType.Local)
             {
                 _SendPlayerEnter(player);
                 return;
@@ -143,7 +143,7 @@ namespace Texel
 
         public override void _PlayerTriggerExit(VRCPlayerApi player)
         {
-            if (!localPlayerOnly)
+            if (playerType != ZonePlayerType.Local)
             {
                 _SendPlayerLeave(player);
                 return;
@@ -211,7 +211,7 @@ namespace Texel
 
         public override bool _LocalPlayerInZone()
         {
-            if (!localPlayerOnly)
+            if (playerType != ZonePlayerType.Local)
                 return false;
 
             if (enterSetMode == SET_UNION)

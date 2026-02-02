@@ -21,9 +21,13 @@ namespace Texel
         [SerializeField] protected internal bool checkForAdd = false;
         [SerializeField] protected internal float addCheckInterval = 5f;
 
+        [SerializeField] protected internal DebugLog debugLog;
+        [SerializeField] protected internal bool vrcLog;
+
         protected DataDictionary trackingData;
         protected DataDictionary monitoring;
 
+        private bool usingDebug = false;
         private bool monitorQueued = false;
         private int playerCount = 1;
         private int trackingCount = 0;
@@ -36,9 +40,17 @@ namespace Texel
         private VRCPlayerApi[] playerCheckList;
         private float playerCheckInterval;
 
+        private const string SOURCE_TRIGGER = "trigger";
+        private const string SOURCE_MONITOR = "monitor";
+        private const string SOURCE_WORLD = "world";
+        private const string SOURCE_SCAN = "scan";
+        private const string SOURCE_TYPECHANGE = "typechange";
+
         protected override void _Init()
         {
             base._Init();
+
+            usingDebug = vrcLog || Utilities.IsValid(debugLog);
 
             trackingData = new DataDictionary();
             monitoring = new DataDictionary();
@@ -83,6 +95,63 @@ namespace Texel
             }
         }
 
+        public override ZonePlayerType PlayerType 
+        {
+            set
+            {
+                if (value == ZonePlayerType.Legacy)
+                    return;
+
+                if (playerType != value)
+                {
+                    ZonePlayerType prev = playerType;
+                    playerType = value;
+                    _UpdateHandlers(EVENT_PLAYER_TYPE_CHANGED);
+
+                    bool updateAll = false;
+                    bool removePlayer = false;
+                    bool addPlayer = false;
+
+                    if (usingDebug) _DebugLog($"Set PlayerType = {value}");
+
+                    if (value == ZonePlayerType.None)
+                    {
+                        removePlayer = true;
+                        updateAll = true;
+                    }
+                    else if (value == ZonePlayerType.Local)
+                    {
+                        if (prev == ZonePlayerType.Remote || prev == ZonePlayerType.None)
+                            addPlayer = true;
+                        updateAll = true;
+                    } else if (value == ZonePlayerType.Remote)
+                    {
+                        if (prev == ZonePlayerType.Local || prev == ZonePlayerType.Both)
+                            removePlayer = true;
+                        updateAll = true;
+                    } else if (value == ZonePlayerType.Both)
+                    {
+                        if (prev == ZonePlayerType.Remote || prev == ZonePlayerType.None)
+                            addPlayer = true;
+                        if (prev == ZonePlayerType.Local || prev == ZonePlayerType.None)
+                            updateAll = true;
+                    }
+
+                    // When players change, try to remove local player first, and add local player last,
+                    // relative to bulk add/remove of remaining players
+
+                    if (removePlayer)
+                        _CheckedRemovePlayer(Networking.LocalPlayer, SOURCE_TYPECHANGE);
+
+                    if (updateAll)
+                        _UpdateAllPlayers(false, SOURCE_TYPECHANGE);
+
+                    if (addPlayer)
+                        _CheckedAddPlayer(Networking.LocalPlayer, SOURCE_TYPECHANGE);
+                }
+            }
+        }
+
         public override bool _PlayerInZone(VRCPlayerApi player)
         {
             _EnsureInit();
@@ -100,10 +169,7 @@ namespace Texel
             base.OnPlayerJoined(player);
 
             if (Utilities.IsValid(player) && triggerMode == ZoneTriggerMode.Position)
-            {
-                if (!localPlayerOnly || player.isLocal)
-                    _CheckedAddPlayer(player);
-            }
+                _CheckedAddPlayer(player, SOURCE_WORLD);
 
             playerCount = VRCPlayerApi.GetPlayerCount();
         }
@@ -113,7 +179,7 @@ namespace Texel
             base.OnPlayerLeft(player);
 
             if (Utilities.IsValid(player))
-                _RemovePlayer(player);
+                _RemovePlayer(player, SOURCE_WORLD);
 
             playerCount = VRCPlayerApi.GetPlayerCount();
         }
@@ -124,16 +190,18 @@ namespace Texel
             if (!Utilities.IsValid(player))
                 return;
 
-            if (localPlayerOnly && !player.isLocal)
-                return;
+            if (usingDebug) _DebugLog($"Player Trigger Enter: {player.displayName} [{player.playerId}] [local: {player.isLocal}]");
 
             if (triggerMode == ZoneTriggerMode.CapsuleTrigger)
             {
-                _AddPlayer(player);
+                if (!_PlayerValidForType(player))
+                    return;
+
+                _AddPlayer(player, SOURCE_TRIGGER);
                 return;
             }
 
-            _CheckedAddPlayer(player, true);
+            _CheckedAddPlayer(player, SOURCE_TRIGGER);
         }
 
         public override void _PlayerTriggerExit(VRCPlayerApi player)
@@ -142,35 +210,52 @@ namespace Texel
             if (!Utilities.IsValid(player))
                 return;
 
-            if (localPlayerOnly && !player.isLocal)
+            if (usingDebug) _DebugLog($"Player Trigger Exit: {player.displayName} [{player.playerId}] [local: {player.isLocal}]");
+
+            if (!_PlayerValidForType(player))
                 return;
 
             if (triggerMode == ZoneTriggerMode.CapsuleTrigger)
             {
-                _RemovePlayer(player);
+                _RemovePlayer(player, SOURCE_TRIGGER);
                 return;
             }
 
-            _CheckedRemovePlayer(player, true);
+            _CheckedRemovePlayer(player, SOURCE_TRIGGER);
         }
 
-        protected void _CheckedAddPlayer(VRCPlayerApi player, bool triggered = false)
+        bool _PlayerValidForType(VRCPlayerApi player)
         {
+            if (playerType == ZonePlayerType.None)
+                return false;
+            if (player.isLocal && playerType == ZonePlayerType.Remote)
+                return false;
+            if (!player.isLocal && playerType == ZonePlayerType.Local)
+                return false;
+
+            return true;
+        }
+
+        protected void _CheckedAddPlayer(VRCPlayerApi player, string source)
+        {
+            bool typeValid = _PlayerValidForType(player);
+
             if (!_PlayerPositionInZoneTriggering(player, positionRadius))
             {
                 if (trackingData.ContainsKey(player.playerId))
-                    _RemovePlayer(player);
+                    _RemovePlayer(player, source);
 
-                if (triggered)
+                if (source == SOURCE_TRIGGER && typeValid)
                     _MonitorPlayer(player, true);
 
                 return;
             }
 
-            _AddPlayer(player);
+            if (typeValid)
+                _AddPlayer(player, source);
         }
 
-        protected void _AddPlayer(VRCPlayerApi player)
+        protected void _AddPlayer(VRCPlayerApi player, string source)
         {
             int playerId = player.playerId;
 
@@ -178,6 +263,7 @@ namespace Texel
 
             if (!trackingData.ContainsKey(playerId))
             {
+                if (usingDebug) _DebugLog($"Add tracked player by {source}: {player.displayName} [{playerId}] [C: {TrackedPlayerCount}]");
                 trackingData.Add(playerId, new DataToken(player));
                 trackingCount = trackingData.Count;
 
@@ -185,23 +271,26 @@ namespace Texel
             }
         }
 
-        protected void _CheckedRemovePlayer(VRCPlayerApi player, bool triggered = false)
+        protected void _CheckedRemovePlayer(VRCPlayerApi player, string source)
         {
+            bool typeValid = _PlayerValidForType(player);
+
             if (_PlayerPositionInZoneTriggering(player, positionRadius))
             {
-                if (!trackingData.ContainsKey(player.playerId))
-                    _AddPlayer(player);
+                if (!trackingData.ContainsKey(player.playerId) && typeValid)
+                    _AddPlayer(player, source);
 
-                if (triggered)
+                if (source == SOURCE_TRIGGER)
                     _MonitorPlayer(player, false);
 
-                return;
+                if (typeValid)
+                    return;
             }
 
-            _RemovePlayer(player);
+            _RemovePlayer(player, source);
         }
 
-        protected void _RemovePlayer(VRCPlayerApi player)
+        protected void _RemovePlayer(VRCPlayerApi player, string source)
         {
             int playerId = player.playerId;
 
@@ -209,6 +298,7 @@ namespace Texel
 
             if (trackingData.ContainsKey(playerId))
             {
+                if (usingDebug) _DebugLog($"Remove tracked player by {source}: {player.displayName} [{playerId}] [C: {TrackedPlayerCount}]");
                 trackingData.Remove(playerId);
                 trackingCount = trackingData.Count;
 
@@ -251,9 +341,9 @@ namespace Texel
                         {
                             bool inZone = _PlayerPositionInZoneTriggering(player, positionRadius);
                             if (isAdd && inZone)
-                                _AddPlayer(player);
+                                _AddPlayer(player, SOURCE_MONITOR);
                             else if (!isAdd && !inZone)
-                                _RemovePlayer(player);
+                                _RemovePlayer(player, SOURCE_MONITOR);
                             else
                                 clear = false;
                         }
@@ -300,7 +390,7 @@ namespace Texel
                 VRCPlayerApi player = VRCPlayerApi.GetPlayerById(playerId);
 
                 if (Utilities.IsValid(player))
-                    _CheckedRemovePlayer(player, false);
+                    _CheckedRemovePlayer(player, SOURCE_SCAN);
             }
 
             trackedCheckIndex += 1;
@@ -337,9 +427,38 @@ namespace Texel
 
             VRCPlayerApi player = playerCheckList[playerCheckIndex];
             if (Utilities.IsValid(player) && !trackingData.ContainsKey(player.playerId))
-                _CheckedAddPlayer(player, false);
+                _CheckedAddPlayer(player, SOURCE_SCAN);
 
             playerCheckIndex += 1;
+        }
+
+        void _UpdateAllPlayers(bool includeLocal, string source)
+        {
+            int count = VRCPlayerApi.GetPlayerCount();
+            VRCPlayerApi[] playerCheckList = new VRCPlayerApi[count];
+            playerCheckList = VRCPlayerApi.GetPlayers(playerCheckList);
+
+            for (int i = 0; i < count; i++)
+            {
+                VRCPlayerApi player = playerCheckList[i];
+                if (!Utilities.IsValid(player))
+                    continue;
+                if (!includeLocal && player.isLocal)
+                    continue;
+
+                if (!trackingData.ContainsKey(player.playerId))
+                    _CheckedAddPlayer(player, source);
+                else
+                    _CheckedRemovePlayer(player, source);
+            }
+        }
+
+        void _DebugLog(string message)
+        {
+            if (vrcLog)
+                Debug.Log("[Texel:TrackedZoneTrigger] " + message);
+            if (Utilities.IsValid(debugLog))
+                debugLog._Write("TrackedZoneTrigger", message);
         }
     }
 }

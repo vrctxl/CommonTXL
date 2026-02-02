@@ -1,9 +1,12 @@
 ﻿
 using System;
+using System.Runtime.CompilerServices;
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
 using VRC.Udon;
+
+[assembly: InternalsVisibleTo("com.texelsaur.common.Editor")]
 
 namespace Texel
 {
@@ -11,6 +14,15 @@ namespace Texel
     {
         CapsuleTrigger,
         Position,
+    }
+
+    public enum ZonePlayerType
+    {
+        None,
+        Local,
+        Remote,
+        Both,
+        Legacy
     }
 
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
@@ -21,7 +33,10 @@ namespace Texel
         [Tooltip("The Udon Behavior to send messages to on enter and leave events")]
         public UdonBehaviour targetBehavior;
         [Tooltip("Whether colliders should only recognize the local player")]
+        [Obsolete("Use playerType instead")]
         public bool localPlayerOnly = true;
+        [Tooltip("Whether colliders should only recognize the local player, non-local players, or both.")]
+        [SerializeField] internal ZonePlayerType playerType = ZonePlayerType.Legacy;
         [Tooltip("The event message to send on a player trigger enter event.  Leave blank to do nothing.")]
         public string playerEnterEvent;
         [Tooltip("The event message to send on a player trigger leave event.  Leave blank to do nothing.")]
@@ -33,7 +48,8 @@ namespace Texel
 
         public const int EVENT_PLAYER_ENTER = 0;
         public const int EVENT_PLAYER_LEAVE = 1;
-        const int EVENT_COUNT = 2;
+        public const int EVENT_PLAYER_TYPE_CHANGED = 2;
+        const int EVENT_COUNT = 3;
 
         bool triggered = false;
 
@@ -47,6 +63,14 @@ namespace Texel
         protected override void _Init()
         {
             cachedColliders = GetComponents<Collider>();
+
+            if (playerType == ZonePlayerType.Legacy)
+            {
+                if (localPlayerOnly)
+                    playerType = ZonePlayerType.Local;
+                else
+                    playerType = ZonePlayerType.Both;
+            }
 
             if (configureEvents)
             {
@@ -62,6 +86,19 @@ namespace Texel
             get { return false; }
         }
 
+        public virtual ZonePlayerType PlayerType
+        {
+            get { return playerType; }
+            set
+            {
+                if (playerType == ZonePlayerType.Local && value != ZonePlayerType.Local)
+                    triggered = false;
+
+                playerType = value;
+                _UpdateHandlers(EVENT_PLAYER_TYPE_CHANGED);
+            }
+        }
+
         public override void OnPlayerTriggerEnter(VRCPlayerApi player)
         {
             _PlayerTriggerEnter(player);
@@ -69,10 +106,14 @@ namespace Texel
 
         public virtual void _PlayerTriggerEnter(VRCPlayerApi player)
         {
-            if (localPlayerOnly && !player.isLocal)
+            if (playerType == ZonePlayerType.None)
+                return;
+            if (playerType == ZonePlayerType.Local && !player.isLocal)
+                return;
+            if (playerType == ZonePlayerType.Remote && player.isLocal)
                 return;
 
-            if (localPlayerOnly)
+            if (playerType == ZonePlayerType.Local)
                 triggered = true;
 
             _UpdateHandlers(EVENT_PLAYER_ENTER, player);
@@ -85,10 +126,14 @@ namespace Texel
 
         public virtual void _PlayerTriggerExit(VRCPlayerApi player)
         {
-            if (localPlayerOnly && !player.isLocal)
+            if (playerType == ZonePlayerType.None)
+                return;
+            if (playerType == ZonePlayerType.Local && !player.isLocal)
+                return;
+            if (playerType == ZonePlayerType.Remote && player.isLocal)
                 return;
 
-            if (localPlayerOnly)
+            if (playerType == ZonePlayerType.Local)
                 triggered = false;
 
             _UpdateHandlers(EVENT_PLAYER_LEAVE, player);
@@ -97,7 +142,7 @@ namespace Texel
         [Obsolete("Use _PlayerInZone")]
         public virtual bool _LocalPlayerInZone()
         {
-            if (!localPlayerOnly)
+            if (playerType != ZonePlayerType.Local)
                 return false;
 
             return triggered;

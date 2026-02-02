@@ -10,6 +10,7 @@ namespace Texel
         protected SerializedProperty configureEventsProperty;
         protected SerializedProperty targetBehaviorProperty;
         protected SerializedProperty localPlayerOnlyProperty;
+        protected SerializedProperty playerTypeProperty;
         protected SerializedProperty playerEnterEventProperty;
         protected SerializedProperty playerLeaveEventProperty;
         protected SerializedProperty playerTargetVariableProperty;
@@ -24,6 +25,7 @@ namespace Texel
             configureEventsProperty = serializedObject.FindProperty(nameof(ZoneTrigger.configureEvents));
             targetBehaviorProperty = serializedObject.FindProperty(nameof(ZoneTrigger.targetBehavior));
             localPlayerOnlyProperty = serializedObject.FindProperty(nameof(ZoneTrigger.localPlayerOnly));
+            playerTypeProperty = serializedObject.FindProperty(nameof(ZoneTrigger.playerType));
             playerEnterEventProperty = serializedObject.FindProperty(nameof(ZoneTrigger.playerEnterEvent));
             playerLeaveEventProperty = serializedObject.FindProperty(nameof(ZoneTrigger.playerLeaveEvent));
             playerTargetVariableProperty = serializedObject.FindProperty(nameof(ZoneTrigger.playerTargetVariable));
@@ -52,7 +54,9 @@ namespace Texel
             }
 
             EditorGUILayout.Space();
-            EditorGUILayout.PropertyField(localPlayerOnlyProperty);
+            if (playerTypeProperty.enumValueIndex == 4)
+                EditorGUILayout.PropertyField(localPlayerOnlyProperty);
+            EditorGUILayout.PropertyField(playerTypeProperty);
         }
     }
 }

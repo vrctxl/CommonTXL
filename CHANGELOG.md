@@ -1,10 +1,17 @@
 # Changelog
 
-## [1.7.6] - 01-25-25
+## [1.8.0] - 02-01-26
+- Added SuppressEvents property to EventBase
+- Added PlayerType field and property to ZoneTrigger and derivatives, replacing localOnly field
+- Deprecated localOnly field on ZoneTrigger and derivatives
+- Added EVENT_PLAYER_TYPE_CHANGED event to ZoneTrigger and derivatives
+- Added debug log support to TrackedZoneTrigger
+
+## [1.7.6] - 01-25-26
 - Added Master, InstanceOwner, FirstJoin, and FirstJoinName properties to AccessControl
 - Fixed array overflow in AccessControl if more than 100 users are in world
 
-## [1.7.5] - 01-20-25
+## [1.7.5] - 01-20-26
 - Exposed OwnerName and ComponentName in AccessEventBase
 - Fixed exception in _ReleaseImage(claimToken) in ImageDownloadManager
 - Added _RefreshImage(url) and _RefreshImage(claimToken) ImageDownloadManager

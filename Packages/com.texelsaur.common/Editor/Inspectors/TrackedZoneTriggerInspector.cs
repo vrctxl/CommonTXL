@@ -1,8 +1,10 @@
-using System.Collections;
-using System.Collections.Generic;
+
+using System.Runtime.CompilerServices;
 using UdonSharpEditor;
 using UnityEditor;
 using UnityEngine;
+
+[assembly: InternalsVisibleTo("com.texelsaur.common.Editor")]
 
 namespace Texel
 {
@@ -17,6 +19,9 @@ namespace Texel
         protected SerializedProperty checkForAddProperty;
         protected SerializedProperty addCheckIntervalProperty;
 
+        protected SerializedProperty vrcLogProperty;
+        protected SerializedProperty debugLogProperty;
+
         protected override void InitProperties()
         {
             base.InitProperties();
@@ -28,6 +33,9 @@ namespace Texel
             removeCheckIntervalProperty = serializedObject.FindProperty(nameof(TrackedZoneTrigger.removeCheckInterval));
             checkForAddProperty = serializedObject.FindProperty(nameof(TrackedZoneTrigger.checkForAdd));
             addCheckIntervalProperty = serializedObject.FindProperty(nameof(TrackedZoneTrigger.addCheckInterval));
+
+            vrcLogProperty = serializedObject.FindProperty(nameof(TrackedZoneTrigger.vrcLog));
+            debugLogProperty = serializedObject.FindProperty(nameof(TrackedZoneTrigger.debugLog));
         }
 
         public override void OnInspectorGUI()
@@ -64,6 +72,11 @@ namespace Texel
                     EditorGUI.indentLevel--;
                 }
             }
+
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Debug", EditorStyles.boldLabel);
+            EditorGUILayout.PropertyField(debugLogProperty);
+            EditorGUILayout.PropertyField(vrcLogProperty);
 
             if (serializedObject.hasModifiedProperties)
                 serializedObject.ApplyModifiedProperties();
