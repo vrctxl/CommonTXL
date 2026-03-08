@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.8.1] - 03-08-26
+- Create COMMON_TXL define symbol on load
+- Added more icons to UI atlas
+- Fixed placement of TrackedZoneTrigger logging
+
 ## [1.8.0] - 02-01-26
 - Added SuppressEvents property to EventBase
 - Added PlayerType field and property to ZoneTrigger and derivatives, replacing localOnly field

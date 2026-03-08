@@ -263,9 +263,9 @@ namespace Texel
 
             if (!trackingData.ContainsKey(playerId))
             {
-                if (usingDebug) _DebugLog($"Add tracked player by {source}: {player.displayName} [{playerId}] [C: {TrackedPlayerCount}]");
                 trackingData.Add(playerId, new DataToken(player));
                 trackingCount = trackingData.Count;
+                if (usingDebug) _DebugLog($"Add tracked player by {source}: {player.displayName} [{playerId}] [C: {TrackedPlayerCount}]");
 
                 _UpdateHandlers(EVENT_PLAYER_ENTER, player);
             }
@@ -298,9 +298,9 @@ namespace Texel
 
             if (trackingData.ContainsKey(playerId))
             {
-                if (usingDebug) _DebugLog($"Remove tracked player by {source}: {player.displayName} [{playerId}] [C: {TrackedPlayerCount}]");
                 trackingData.Remove(playerId);
                 trackingCount = trackingData.Count;
+                if (usingDebug) _DebugLog($"Remove tracked player by {source}: {player.displayName} [{playerId}] [C: {TrackedPlayerCount}]");
 
                 _UpdateHandlers(EVENT_PLAYER_LEAVE, player);
             }
