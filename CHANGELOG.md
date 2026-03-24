@@ -1,5 +1,8 @@
 # Changelog
 
+## [1.8.2] - 03-24-26
+- Added _ClearLockout() and _ClearPlayers() to SyncPlayerList
+
 ## [1.8.1] - 03-08-26
 - Create COMMON_TXL define symbol on load
 - Added more icons to UI atlas

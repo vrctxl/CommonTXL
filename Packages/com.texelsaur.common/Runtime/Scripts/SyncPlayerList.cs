@@ -270,6 +270,20 @@ namespace Texel
             if (syncLockout[index])
                 return false;
 
+            _RemovePlayerAtIndexInternal(index);
+
+            syncChangeCount += 1;
+
+            RequestSerialization();
+            _UpdateHandlers(EVENT_MEMBERSHIP_CHANGE);
+
+            DebugLog($"Remove player at index {index}");
+
+            return true;
+        }
+
+        void _RemovePlayerAtIndexInternal(int index)
+        {
             if (autoCompact)
             {
                 syncPlayerIds[index] = syncPlayerIds[syncMaxIndex];
@@ -288,13 +302,33 @@ namespace Texel
                 syncPlayerNames[index] = string.Empty;
                 syncLockout[index] = false;
             }
+        }
 
-            syncChangeCount += 1;
+        public bool _ClearPlayers()
+        {
+            if (!_AccessCheck())
+                return false;
 
-            RequestSerialization();
-            _UpdateHandlers(EVENT_MEMBERSHIP_CHANGE);
+            int startCount = syncMaxIndex;
+            for (int i = 0; i < syncMaxIndex; i++)
+            {
+                if (syncLockout[i])
+                    continue;
 
-            DebugLog($"Remove player at index {index}");
+                _RemovePlayerAtIndexInternal(i);
+                if (syncPlayerIds[i] != -1)
+                    i -= 1;
+            }
+
+            if (startCount > syncMaxIndex)
+            {
+                syncChangeCount += 1;
+
+                RequestSerialization();
+                _UpdateHandlers(EVENT_MEMBERSHIP_CHANGE);
+
+                DebugLog($"Cleared {startCount} players");
+            }
 
             return true;
         }
@@ -397,6 +431,21 @@ namespace Texel
                 return false;
 
             return syncLockout[index];
+        }
+
+        public bool _ClearLockout()
+        {
+            if (!_AccessCheck())
+                return false;
+
+            syncLockout = new bool[syncLockout.Length];
+
+            syncLockoutChangeCount += 1;
+
+            RequestSerialization();
+            _UpdateHandlers(EVENT_LOCKOUT_CHANGE);
+
+            return true;
         }
 
         public int _PlayerCount()
