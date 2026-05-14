@@ -198,7 +198,7 @@ namespace Texel
             if (index == -1)
                 return;
 
-            whitelistSources = (AccessControlUserSource[])UtilityTxl.ArrayRemoveElement(whitelistSources, index, typeof(AccessControlUserSource));
+            whitelistSources = (AccessControlUserSource[])UtilityTxl.ArrayRemoveElement(whitelistSources, index, source.GetType());
             source._Unregister(AccessControlUserSource.EVENT_REVALIDATE, this, nameof(_RefreshWhitelistCheck));
 
             _Validate();
