@@ -28,6 +28,8 @@ namespace Texel
         [Header("Default Options")]
         [Tooltip("Whether ACL is enforced.  When not enforced, access is always given.")]
         public bool enforce = true;
+        [Tooltip("Whether to respond to player join and leave events.  If disabled, master and owner rules may not work correctly.\n\nEvents are automatically ignored if rule configuration does not need them.")]
+        public bool handleJoinLeaveEvents = true;
         [Tooltip("Write out debug info to VRChat log")]
         public bool debugLogging = false;
 
@@ -53,7 +55,6 @@ namespace Texel
         bool _localCalculatedAccess = false;
 
         bool _worldHasOwner = false;
-        VRCPlayerApi[] _playerBuffer = new VRCPlayerApi[100];
 
         VRCPlayerApi foundMaster = null;
         VRCPlayerApi foundInstanceOwner = null;
@@ -62,7 +63,8 @@ namespace Texel
 
         public const int EVENT_VALIDATE = 0;
         public const int EVENT_ENFORCE_UPDATE = 1;
-        public const int EVENT_COUNT = 2;
+        public const int EVENT_USER_SOURCE_VALIDATE = 2;
+        public const int EVENT_COUNT = 3;
 
         void Start()
         {
@@ -138,11 +140,13 @@ namespace Texel
             }
         }
 
+        [Obsolete("Use Networking.InstanceOwner")]
         public VRCPlayerApi InstanceOwner
         {
             get { return foundInstanceOwner; }
         }
 
+        [Obsolete("Use Networking.Master")]
         public VRCPlayerApi Master
         {
             get { return foundMaster; }
@@ -197,8 +201,9 @@ namespace Texel
             _Validate();
         }
 
-        void _CalculateLocalAccess()
+        bool _CalculateLocalAccess()
         {
+            bool prevAccess = _localCalculatedAccess;
             _localCalculatedAccess = false;
 
             if (allowInstanceOwner && _localPlayerInstanceOwner)
@@ -207,59 +212,52 @@ namespace Texel
                 _localCalculatedAccess = true;
             if (allowAnyone)
                 _localCalculatedAccess = true;
+
+            return prevAccess != _localCalculatedAccess;
+        }
+
+        bool _ShouldHandlePlayerEvents()
+        {
+            if (!handleJoinLeaveEvents || allowAnyone)
+                return false;
+
+            return allowMaster || allowInstanceOwner || allowFirstJoin;
         }
 
         public override void OnPlayerJoined(VRCPlayerApi player)
         {
-            _SearchInstanceOwner();
-            _CalculateLocalAccess();
+            if (!_ShouldHandlePlayerEvents())
+                return;
 
-            _UpdateHandlers(EVENT_VALIDATE);
+            bool ownerMasterChange = _SearchInstanceOwner();
+            bool localAccessChange = _CalculateLocalAccess();
+
+            if (ownerMasterChange || localAccessChange)
+                _UpdateHandlers(EVENT_VALIDATE);
         }
 
         public override void OnPlayerLeft(VRCPlayerApi player)
         {
-            _SearchInstanceOwner();
-            _CalculateLocalAccess();
+            if (!_ShouldHandlePlayerEvents())
+                return;
 
-            _UpdateHandlers(EVENT_VALIDATE);
+            bool ownerMasterChange = _SearchInstanceOwner();
+            bool localAccessChange = _CalculateLocalAccess();
+
+            if (ownerMasterChange || localAccessChange)
+                _UpdateHandlers(EVENT_VALIDATE);
         }
 
-        void _SearchInstanceOwner()
+        bool _SearchInstanceOwner()
         {
-            int playerCount = VRCPlayerApi.GetPlayerCount();
-            if (playerCount > _playerBuffer.Length)
-                _playerBuffer = (VRCPlayerApi[])UtilityTxl.ArrayMinSize(_playerBuffer, playerCount, typeof(VRCPlayerApi));
+            VRCPlayerApi prevOwner = foundInstanceOwner;
+            VRCPlayerApi prevMaster = foundMaster;
 
-            _playerBuffer = VRCPlayerApi.GetPlayers(_playerBuffer);
+            foundInstanceOwner = Networking.InstanceOwner;
+            foundMaster = Networking.Master;
+            _worldHasOwner = foundInstanceOwner != null;
 
-            _worldHasOwner = false;
-            foundInstanceOwner = null;
-            foundInstanceOwnerCount = 0;
-            foundMaster = null;
-            foundMasterCount = 0;
-
-            for (int i = 0; i < playerCount; i++)
-            {
-                VRCPlayerApi player = _playerBuffer[i];
-                if (!Utilities.IsValid(player) || !player.IsValid())
-                    continue;
-
-                if (player.isInstanceOwner)
-                {
-                    foundInstanceOwner = player;
-                    foundInstanceOwnerCount += 1;
-                }
-
-                if (player.isMaster)
-                {
-                    foundMaster = player;
-                    foundMasterCount += 1;
-                }
-            }
-
-            if (foundInstanceOwnerCount > 0)
-                _worldHasOwner = true;
+            return prevOwner != foundInstanceOwner || prevMaster != foundMaster;
         }
 
         public void _Enforce(bool state)
@@ -280,6 +278,7 @@ namespace Texel
             }
 
             DebugLog($"Refresh whitelist local={_localPlayerWhitelisted}");
+            _UpdateHandlers(EVENT_USER_SOURCE_VALIDATE);
             _UpdateHandlers(EVENT_VALIDATE);
         }
         

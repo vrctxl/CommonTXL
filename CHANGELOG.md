@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.8.3] - 06-12-26
+- Reduced EVENT_VALIDATE calls in AccessControl from player join/leave to only when relevant state changes
+- Added handleJoinLeaveEvents field (default on) to AccessControl to allow fully disabling that event handling
+- Stopped handling player join/leave events in AccessControl if relevant options were not selected
+- Started using Networking.InstanceOwner / Master properties over searching users in AccessControl, removing fixed user buffer
+
 ## [1.8.2] - 03-24-26
 - Added _ClearLockout() and _ClearPlayers() to SyncPlayerList
 
