@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.0.1] - 07-19-26
+
+- Fixed regression in ControlBase causing script compile errors
+
 ## [2.0.0] - 07-19-26
 - BREAKING: Moved ImageDownloadManager and ImageDownloadQuad into new ImageTXL package, further subdivided
 - BREAKING: Merged GroupToggle, Translation scripts, and additional triggers in from MiscTXL

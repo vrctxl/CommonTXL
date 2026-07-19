@@ -19,7 +19,8 @@ namespace Texel
         public const int COLOR_1 = 6;
         public const int COLOR_2 = 7;
         public const int COLOR_3 = 8;
-        public const int MAX_COLOR_COUNT = 9;
+        public const int COLOR_ORANGE = 9;
+        public const int MAX_COLOR_COUNT = 10;
 
         [SerializeField] protected internal ControlColorMap colorMap;
 
@@ -37,6 +38,7 @@ namespace Texel
 
         Slider[] sliders;
         InputField[] inputFields;
+        TMP_InputField[] tmpInputFields;
 
         bool init = false;
         bool controlsInit = false;
@@ -78,6 +80,7 @@ namespace Texel
             Color activeCyan = Color.HSVToRGB(180 / 360f, .8f, .9f);
             Color activeWhite = Color.HSVToRGB(0, 0, .9f);
             Color activePurple = Color.HSVToRGB(280 / 360f, .5f, 1f);
+            Color activeOrange = Color.HSVToRGB(30 / 360f, .75f, .9f);
 
             Color activeYellowLabel = Color.HSVToRGB(60 / 360f, .8f, .5f);
             Color activeRedLabel = Color.HSVToRGB(0, .7f, .5f);
@@ -85,6 +88,7 @@ namespace Texel
             Color activeCyanLabel = Color.HSVToRGB(180 / 360f, .8f, .5f);
             Color activeWhiteLabel = Color.HSVToRGB(0, 0, .5f);
             Color activePurpleLabel = Color.HSVToRGB(280 / 360f, .5f, .5f);
+            Color activeOrangeLabel = Color.HSVToRGB(30 / 360f, .75f, .5f);
 
             Color inactiveYellow = Color.HSVToRGB(60 / 360f, .35f, .5f);
             Color inactiveRed = Color.HSVToRGB(0, .35f, .5f);
@@ -92,6 +96,7 @@ namespace Texel
             Color inactiveCyan = Color.HSVToRGB(180 / 360f, .40f, .5f);
             Color inactiveWhite = Color.HSVToRGB(0, 0, .5f);
             Color inactivePurple = Color.HSVToRGB(280 / 360f, .35f, .5f);
+            Color inactiveOrange = Color.HSVToRGB(30 / 360f, .35f, .5f);
 
             Color inactiveYellowLabel = Color.HSVToRGB(60 / 360f, .35f, .2f);
             Color inactiveRedLabel = Color.HSVToRGB(0, .35f, .2f);
@@ -99,13 +104,14 @@ namespace Texel
             Color inactiveCyanLabel = Color.HSVToRGB(180 / 360f, .35f, .2f);
             Color inactiveWhiteLabel = Color.HSVToRGB(0, 0, .2f);
             Color inactivePurpleLabel = Color.HSVToRGB(280 / 360f, .35f, .2f);
+            Color inactiveOrangeLabel = Color.HSVToRGB(30 / 360f, .35f, .2f);
 
-            colorLookupActive = new Color[] { activeRed, activeYellow, activeGreen, activeCyan, activeWhite, activePurple, activeWhite, activeWhite, activeWhite };
-            colorLookupInactive = new Color[] { inactiveRed, inactiveYellow, inactiveGreen, inactiveCyan, inactiveWhite, inactivePurple, inactiveWhite, inactiveWhite, inactiveWhite };
-            colorLookupDisabled = new Color[] { inactiveRed, inactiveYellow, inactiveGreen, inactiveCyan, inactiveWhite, inactivePurple, inactiveWhite, inactiveWhite, inactiveWhite };
+            colorLookupActive = new Color[] { activeRed, activeYellow, activeGreen, activeCyan, activeWhite, activePurple, activeWhite, activeWhite, activeWhite, activeOrange };
+            colorLookupInactive = new Color[] { inactiveRed, inactiveYellow, inactiveGreen, inactiveCyan, inactiveWhite, inactivePurple, inactiveWhite, inactiveWhite, inactiveWhite, inactiveOrange };
+            colorLookupDisabled = new Color[] { inactiveRed, inactiveYellow, inactiveGreen, inactiveCyan, inactiveWhite, inactivePurple, inactiveWhite, inactiveWhite, inactiveWhite, inactiveOrange };
 
-            colorLookupActiveLabel = new Color[] { activeRedLabel, activeYellowLabel, activeGreenLabel, activeCyanLabel, activeWhiteLabel, activePurpleLabel, activeWhiteLabel, activeWhiteLabel, activeWhiteLabel };
-            colorLookupInactiveLabel = new Color[] { inactiveRedLabel, inactiveYellowLabel, inactiveGreenLabel, inactiveCyanLabel, inactiveWhiteLabel, inactivePurpleLabel, inactiveWhiteLabel, inactiveWhiteLabel, inactiveWhiteLabel };
+            colorLookupActiveLabel = new Color[] { activeRedLabel, activeYellowLabel, activeGreenLabel, activeCyanLabel, activeWhiteLabel, activePurpleLabel, activeWhiteLabel, activeWhiteLabel, activeWhiteLabel, activeOrangeLabel };
+            colorLookupInactiveLabel = new Color[] { inactiveRedLabel, inactiveYellowLabel, inactiveGreenLabel, inactiveCyanLabel, inactiveWhiteLabel, inactivePurpleLabel, inactiveWhiteLabel, inactiveWhiteLabel, inactiveWhiteLabel, inactiveOrangeLabel };
 
             if (colorMap)
                 colorMap._ApplyToControlBase(this);
@@ -120,6 +126,7 @@ namespace Texel
 
             sliders = new Slider[SliderCount];
             inputFields = new InputField[InputFieldCount];
+            tmpInputFields = new TMP_InputField[InputFieldCount];
         }
 
         public void _InternalPostInit()
@@ -229,6 +236,7 @@ namespace Texel
                 return;
 
             inputFields[index] = inputField.GetComponent<InputField>();
+            tmpInputFields[index] = inputField.GetComponent<TMP_InputField>();
         }
 
         protected InputField _GetInputField(int index)
@@ -237,6 +245,44 @@ namespace Texel
                 return null;
 
             return inputFields[index];
+        }
+
+        protected TMP_InputField _GetInputFieldTMP(int index)
+        {
+            if (index < 0 || index >= InputFieldCount)
+                return null;
+
+            return tmpInputFields[index];
+        }
+
+        protected string _GetInputFieldValue(int index)
+        {
+            if (index < 0 || index >= InputFieldCount)
+                return null;
+
+            InputField field = inputFields[index];
+            if (field)
+                return field.text;
+
+            TMP_InputField tmpField = tmpInputFields[index];
+            if (tmpField)
+                return tmpField.text;
+
+            return null;
+        }
+
+        protected void _SetInputFieldValue(int index, string value)
+        {
+            if (index < 0 || index >= InputFieldCount)
+                return;
+
+            InputField field = inputFields[index];
+            if (field)
+                field.text = value;
+
+            TMP_InputField tmpField = tmpInputFields[index];
+            if (tmpField)
+                tmpField.SetTextWithoutNotify(value);
         }
     }
 }
