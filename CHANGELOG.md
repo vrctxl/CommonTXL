@@ -8,6 +8,7 @@
 - Suspend DebugState when disabled
 - Added _WriteWarning to DebugLog
 - Fixed player array overflow in legacy ZoneMembership
+- Added _RemoveUserSource to AccessControl (Thanks CompuGeniusCode)
 
 ## [1.8.3] - 06-12-26
 - Reduced EVENT_VALIDATE calls in AccessControl from player join/leave to only when relevant state changes
