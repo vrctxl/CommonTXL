@@ -178,6 +178,8 @@ namespace Texel
             }
 
             maxIndex += 1;
+
+            players = (int[])UtilityTxl.ArrayMinSize(players, maxIndex + 1, typeof(int));
             players[maxIndex] = id;
 
             _UpdateHandlersPlayer(PLAYER_ADD_EVENT, player);
