@@ -1,4 +1,4 @@
-﻿
+
 using System;
 using UdonSharp;
 using UnityEngine;
@@ -40,6 +40,21 @@ namespace Texel
                 newArr = Array.CreateInstance(type, 1);
 
             newArr.SetValue(elem, count);
+            return newArr;
+        }
+
+        public static Array ArrayRemoveElement(Array arr, int index, Type type)
+        {
+            if (!Utilities.IsValid(arr) || index < 0 || index >= arr.Length)
+                return arr;
+
+            int newCount = arr.Length - 1;
+            Array newArr = Array.CreateInstance(type, newCount);
+
+            Array.Copy(arr, 0, newArr, 0, index);
+            if (index < newCount)
+                Array.Copy(arr, index + 1, newArr, index, newCount - index);
+
             return newArr;
         }
 

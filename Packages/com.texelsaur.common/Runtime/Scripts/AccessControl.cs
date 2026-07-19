@@ -1,4 +1,4 @@
-﻿
+
 using System;
 using UdonSharp;
 using UnityEngine;
@@ -180,6 +180,30 @@ namespace Texel
 
             whitelistSources = (AccessControlUserSource[])UtilityTxl.ArrayAddElement(whitelistSources, source, source.GetType());
             source._Register(AccessControlUserSource.EVENT_REVALIDATE, this, nameof(_RefreshWhitelistCheck));
+
+            _Validate();
+        }
+
+        public void _RemoveUserSource(AccessControlUserSource source)
+        {
+            if (!source)
+                return;
+
+            int index = -1;
+            for (int i = 0; i < whitelistSources.Length; i++)
+            {
+                if (whitelistSources[i] == source)
+                {
+                    index = i;
+                    break;
+                }
+            }
+
+            if (index == -1)
+                return;
+
+            whitelistSources = (AccessControlUserSource[])UtilityTxl.ArrayRemoveElement(whitelistSources, index, source.GetType());
+            source._Unregister(AccessControlUserSource.EVENT_REVALIDATE, this, nameof(_RefreshWhitelistCheck));
 
             _Validate();
         }
