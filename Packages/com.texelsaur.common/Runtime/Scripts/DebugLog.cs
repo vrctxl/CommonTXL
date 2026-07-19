@@ -64,6 +64,11 @@ namespace Texel
                 debugText.text = buffer;
         }
 
+        public void _WriteWarning(string component, string message)
+        {
+            _Write(component, message, "FFFF00");
+        }
+
         public void _WriteError(string component, string message)
         {
             _Write(component, message, "FF0000");

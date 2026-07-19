@@ -28,6 +28,7 @@ namespace Texel
         string[] handlerContexts;
 
         int currentContext = 0;
+        bool updateQueued = false;
 
         public const int EVENT_UPDATE = 0;
         const int EVENT_COUNT = 1;
@@ -35,6 +36,14 @@ namespace Texel
         void Start()
         {
             _EnsureInit();
+        }
+
+        private void OnEnable()
+        {
+            if (!Initialized)
+                return;
+
+            _QueueUpdate();
         }
 
         protected override int EventCount => EVENT_COUNT;
@@ -47,7 +56,7 @@ namespace Texel
                     titleText[i].text = title;
             }
 
-            SendCustomEventDelayedSeconds("_Update", updateInterval);
+            _QueueUpdate();
         }
 
         protected override void _OnInitHandlers()
@@ -55,17 +64,30 @@ namespace Texel
             handlerContexts = new string[0];
         }
 
+        void _QueueUpdate()
+        {
+            if (updateQueued)
+                return;
+            if (!enabled || !gameObject.activeInHierarchy)
+                return;
+
+            updateQueued = true;
+            SendCustomEventDelayedSeconds("_Update", updateInterval);
+        }
+
         public void _Update()
         {
+            updateQueued = false;
+
             _Begin();
             if (handlerCount[EVENT_UPDATE] > 0)
-            { 
+            {
                 _UpdateHandlers();
                 if (index > 0)
                     _End();
             }
 
-            SendCustomEventDelayedSeconds("_Update", updateInterval);
+            _QueueUpdate();
         }
 
         public void _Begin()
