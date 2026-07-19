@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.0.0] - 07-19-26
+- BREAKING: Moved ImageDownloadManager and ImageDownloadQuad into new ImageTXL package, further subdivided
+- BREAKING: Merged GroupToggle, Translation scripts, and additional triggers in from MiscTXL
+  - Update MiscTXL to latest or remove it from your project
+- Moved TrackedZoneTrigger and ZoneTrigger under Triggers/Zone
+- Suspend DebugState when disabled
+- Added _WriteWarning to DebugLog
+- Fixed player array overflow in legacy ZoneMembership
+
 ## [1.8.3] - 06-12-26
 - Reduced EVENT_VALIDATE calls in AccessControl from player join/leave to only when relevant state changes
 - Added handleJoinLeaveEvents field (default on) to AccessControl to allow fully disabling that event handling
