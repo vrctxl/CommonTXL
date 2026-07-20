@@ -140,6 +140,11 @@ namespace Texel
             }
         }
 
+        protected override void _PostInit()
+        {
+            _UpdateHandlers(EVENT_VALIDATE);
+        }
+
         [Obsolete("Use Networking.InstanceOwner")]
         public VRCPlayerApi InstanceOwner
         {
