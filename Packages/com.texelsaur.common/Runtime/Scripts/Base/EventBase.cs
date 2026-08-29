@@ -1,43 +1,79 @@
 ﻿
 using System;
+using System.Runtime.CompilerServices;
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
 using VRC.Udon;
 
+[assembly: InternalsVisibleTo("com.texelsaur.common.Editor")]
+
 namespace Texel
 {
     public abstract class EventBase : UdonSharpBehaviour
     {
+        [Header("Debug")]
+        [SerializeField] protected internal DebugLogProvider logProvider;
+        [SerializeField] protected internal bool includeEventLogging = false;
+
+        [Obsolete("Use logProvider")]
+        protected DebugLog eventDebugLog;
+
+        protected string componentName = "";
+        protected string componentNamespace = "CommonTXL";
+
         protected int[] handlerCount;
         protected Component[][] handlers;
         protected string[][] handlerEvents;
         protected string[][] handlerArg1;
-        protected string[][] handlerArg2;
 
-        bool init = false;
-        bool initDone = false;
-        bool postInitDone = false;
-        bool handlersInit = false;
-        int handlerUpdateLevel = 0;
-        bool suppress = false;
+        const int MAX_EVENT_DEPTH = 3;
 
-        protected DebugLog eventDebugLog;
+        const int ERR_RANGE = 0;
+        const int ERR_DEPTH = 1;
+        const int ERR_HANDLER = 2;
 
-        protected virtual int EventCount { get; }
+        int[] eb_depthEvent;
+        int[] eb_depthIndex;
+        int[] eb_depthCount;
+        object[] eb_depthArg;
+        bool[] eb_depthHasArg;
+
+        bool eb_eventInit = false;
+        bool eb_eventInitDone = false;
+        bool eb_postInitDone = false;
+        bool eb_handlersInit = false;
+        bool eb_eventSuppress = false;
+        bool eb_blockingEvents = true;
+        bool eb_eventDispatching = false;
+
+        int eb_handlerUpdateLevel = 0;
+        int eb_eventCount = 0;
+
+        bool eb_useEventDebug;
+        int eb_logEventChannel = -1;
+
+        protected bool useDebug;
+        protected int logChannel = -1;
+
+        protected virtual int EventCount
+        {
+            get { return 0; }
+        }
 
         public void _EnsureInit()
         {
-            if (init)
+            if (eb_eventInit)
                 return;
 
-            init = true;
+            eb_eventInit = true;
 
             _PreInit();
+            _RefreshDebugFlags();
             _InitHandlers();
             _Init();
 
-            initDone = true;
+            eb_eventInitDone = true;
 
             SendCustomEventDelayedFrames(nameof(_InternalPostInit), 1);
         }
@@ -52,46 +88,86 @@ namespace Texel
         {
             _PostInit();
 
-            postInitDone = true;
+            eb_postInitDone = true;
         }
 
         public bool Initialized
         {
-            get { return initDone; }
+            get { return eb_eventInitDone; }
         }
 
         public bool PostInitialized
         {
-            get { return postInitDone; }
+            get { return eb_postInitDone; }
         }
 
         public bool SuppressEvents
         {
-            get { return suppress; }
-            set { suppress = value; }
+            get { return eb_eventSuppress; }
+            set
+            {
+                eb_eventSuppress = value;
+                eb_blockingEvents = value || !eb_handlersInit;
+            }
+        }
+
+        public void _SetComponentName(string componentName, string componentNamespace)
+        {
+            this.componentName = componentName;
+            this.componentNamespace = componentNamespace;
+
+            _RefreshDebugFlags();
+        }
+
+        public virtual DebugLogProvider LogProvider
+        {
+            get { return logProvider; }
+            set
+            {
+                logProvider = value;
+                _RefreshDebugFlags();
+            }
+        }
+
+        public bool EventLogging
+        {
+            get { return includeEventLogging; }
+            set
+            {
+                includeEventLogging = value;
+                _RefreshDebugFlags();
+            }
         }
 
         protected void _InitHandlers()
         {
-            if (handlersInit)
+            if (eb_handlersInit)
                 return;
 
-            handlersInit = true;
-            int eventCount = EventCount;
+            eb_handlersInit = true;
+            eb_eventCount = EventCount;
 
-            handlerCount = new int[eventCount];
-            handlers = new Component[eventCount][];
-            handlerEvents = new string[eventCount][];
-            handlerArg1 = new string[eventCount][];
-            handlerArg2 = new string[eventCount][];
+            handlerCount = new int[eb_eventCount];
+            handlers = new Component[eb_eventCount][];
+            handlerEvents = new string[eb_eventCount][];
+            handlerArg1 = new string[eb_eventCount][];
 
-            for (int i = 0; i < eventCount; i++)
+            for (int i = 0; i < eb_eventCount; i++)
             {
                 handlers[i] = new Component[0];
                 handlerEvents[i] = new string[0];
                 handlerArg1[i] = new string[0];
-                handlerArg2[i] = new string[0];
             }
+
+            int depthSlots = MAX_EVENT_DEPTH + 1;
+
+            eb_depthEvent = new int[depthSlots];
+            eb_depthIndex = new int[depthSlots];
+            eb_depthCount = new int[depthSlots];
+            eb_depthArg = new object[depthSlots];
+            eb_depthHasArg = new bool[depthSlots];
+
+            eb_blockingEvents = eb_eventSuppress;
 
             _OnInitHandlers();
         }
@@ -100,40 +176,17 @@ namespace Texel
 
         public void _Register(int eventIndex, Component handler, string eventName, params string[] args)
         {
-            if (!Utilities.IsValid(handler) || !Utilities.IsValid(eventName))
+            if (_EB_CheckRegistration(eventIndex, handler, eventName, true) != -1)
                 return;
 
-            _InitHandlers();
+            handlers[eventIndex] = (Component[])UtilityTxl.ArrayAddElement(handlers[eventIndex], handler, typeof(Component));
+            handlerEvents[eventIndex] = (string[])UtilityTxl.ArrayAddElement(handlerEvents[eventIndex], eventName, typeof(string));
 
-            if (eventIndex < 0 || eventIndex >= handlerCount.Length)
-            {
-                Debug.LogError($"GameObject {gameObject.name} tried to register out-of-range event {eventIndex} from origin {handler.gameObject.name}:{eventName}!");
-                return;
-            }
+            string arg1 = "";
+            if (args != null && args.Length > 0 && !string.IsNullOrEmpty(args[0]))
+                arg1 = args[0];
 
-            if (handlerUpdateLevel > 0)
-            {
-                Debug.LogError($"GameObject {gameObject.name} tried to register event {eventIndex} from origin {handler.gameObject.name}:{eventName} while handler update in progress!");
-                return;
-            }
-
-            for (int i = 0; i < handlerCount[eventIndex]; i++)
-            {
-                if (handlers[eventIndex][i] == handler && handlerEvents[eventIndex][i] == eventName)
-                    return;
-            }
-
-            handlers[eventIndex] = (Component[])_AddElement(handlers[eventIndex], handler, typeof(Component));
-            handlerEvents[eventIndex] = (string[])_AddElement(handlerEvents[eventIndex], eventName, typeof(string));
-
-            handlerArg1[eventIndex] = (string[])_AddElement(handlerArg1[eventIndex], "", typeof(string));
-            handlerArg2[eventIndex] = (string[])_AddElement(handlerArg2[eventIndex], "", typeof(string));
-
-            if (Utilities.IsValid(args) && args.Length >= 1)
-                handlerArg1[eventIndex][handlerArg1[eventIndex].Length - 1] = args[0];
-            if (Utilities.IsValid(args) && args.Length >= 2)
-                handlerArg2[eventIndex][handlerArg2[eventIndex].Length - 1] = args[1];
-
+            handlerArg1[eventIndex] = (string[])UtilityTxl.ArrayAddElement(handlerArg1[eventIndex], arg1, typeof(string));
             handlerCount[eventIndex] += 1;
 
             _OnRegister(eventIndex, handlerCount[eventIndex] - 1);
@@ -146,33 +199,13 @@ namespace Texel
 
         public void _Unregister(int eventIndex, Component handler, string eventName)
         {
-            if (!Utilities.IsValid(handler) || !Utilities.IsValid(eventName))
+            int index = _EB_CheckRegistration(eventIndex, handler, eventName, false);
+            if (index < 0)
                 return;
 
-            _InitHandlers();
-
-            if (eventIndex < 0 || eventIndex >= handlerCount.Length)
-            {
-                Debug.LogError($"GameObject {gameObject.name} tried to unregister out-of-range event {eventIndex} from origin {handler.gameObject.name}:{eventName}!");
-                return;
-            }
-
-            if (handlerUpdateLevel > 0)
-            {
-                Debug.LogError($"GameObject {gameObject.name} tried to unregister event {eventIndex} from origin {handler.gameObject.name}:{eventName} while handler update in progress!");
-                return;
-            }
-
-            int index = _FindHandlerIndex(eventIndex, handler, eventName);
-            if (index == -1)
-                return;
-
-            handlers[eventIndex] = (Component[])_RemoveElement(handlers[eventIndex], index, typeof(Component));
-            handlerEvents[eventIndex] = (string[])_RemoveElement(handlerEvents[eventIndex], index, typeof(string));
-
-            handlerArg1[eventIndex] = (string[])_RemoveElement(handlerArg1[eventIndex], index, typeof(string));
-            handlerArg2[eventIndex] = (string[])_RemoveElement(handlerArg2[eventIndex], index, typeof(string));
-
+            handlers[eventIndex] = (Component[])UtilityTxl.ArrayRemoveElement(handlers[eventIndex], index, typeof(Component));
+            handlerEvents[eventIndex] = (string[])UtilityTxl.ArrayRemoveElement(handlerEvents[eventIndex], index, typeof(string));
+            handlerArg1[eventIndex] = (string[])UtilityTxl.ArrayRemoveElement(handlerArg1[eventIndex], index, typeof(string));
             handlerCount[eventIndex] -= 1;
 
             _OnUnregister(eventIndex, index);
@@ -183,169 +216,207 @@ namespace Texel
 
         }
 
+        private int _EB_CheckRegistration(int eventIndex, Component handler, string eventName, bool registering)
+        {
+            if (!Utilities.IsValid(handler) || string.IsNullOrEmpty(eventName))
+                return -2;
+
+            _InitHandlers();
+
+            if (eventIndex < 0 || eventIndex >= eb_eventCount)
+            {
+                _EB_RegistrationError(eventIndex, handler, eventName, registering, false);
+                return -2;
+            }
+
+            if (eb_eventDispatching)
+            {
+                _EB_RegistrationError(eventIndex, handler, eventName, registering, true);
+                return -2;
+            }
+
+            return _FindHandlerIndex(eventIndex, handler, eventName);
+        }
+
         protected void _UpdateHandlers(int eventIndex)
         {
-            if (handlerCount == null || suppress)
-                return;
-
-            if (eventIndex < 0 || eventIndex >= handlerCount.Length)
-            {
-                string errStr = $"GameObject {gameObject.name} tried to trigger out-of-range event {eventIndex}!";
-                Debug.LogError(errStr);
-                if (eventDebugLog)
-                    eventDebugLog._Write("  event", errStr);
-                return;
-            }
-
-            if (handlerUpdateLevel == 0)
-                _InternalUpdateHandlers1(eventIndex);
-            else if (handlerUpdateLevel == 1)
-                _InternalUpdateHandlers2(eventIndex);
-            else if (handlerUpdateLevel == 2)
-                _InternalUpdateHandlers3(eventIndex);
-            else
-            {
-                string errStr = $"[{handlerUpdateLevel}] [{gameObject.name}:{eventIndex}] [X] -> Event call depth exceeded!";
-                Debug.LogError(errStr);
-                if (eventDebugLog)
-                    eventDebugLog._Write("  event", errStr);
-            }
+            _InternalUpdateHandlers(eventIndex, null, false);
         }
 
-        public void _InternalUpdateHandlers1(int eventIndex)
-        {
-            handlerUpdateLevel += 1;
-            int count = handlerCount[eventIndex];
-            for (int i = 0; i < count; i++)
-            {
-                UdonBehaviour script = (UdonBehaviour)handlers[eventIndex][i];
-                if (!script)
-                {
-                    Debug.LogError($"EventBase [{gameObject.name}:{eventIndex}] registered handler missing or destroyed");
-                    continue;
-                }
-                if (eventDebugLog)
-                    eventDebugLog._Write("  event", $"[{handlerUpdateLevel}] [{gameObject.name}:{eventIndex}] [{i + 1}/{count}] -> {script.gameObject.name}:{handlerEvents[eventIndex][i]}");
-                script.SendCustomEvent(handlerEvents[eventIndex][i]);
-            }
-            handlerUpdateLevel -= 1;
-        }
-
-        public void _InternalUpdateHandlers3(int eventIndex)
-        {
-            handlerUpdateLevel += 1;
-            int count = handlerCount[eventIndex];
-            for (int i = 0; i < count; i++)
-            {
-                UdonBehaviour script = (UdonBehaviour)handlers[eventIndex][i];
-                if (!script)
-                {
-                    Debug.LogError($"EventBase [{gameObject.name}:{eventIndex}] registered handler missing or destroyed");
-                    continue;
-                }
-                if (eventDebugLog)
-                    eventDebugLog._Write("  event", $"[{handlerUpdateLevel}] [{gameObject.name}:{eventIndex}] [{i + 1}/{count}] -> {script.gameObject.name}:{handlerEvents[eventIndex][i]}");
-                script.SendCustomEvent(handlerEvents[eventIndex][i]);
-            }
-            handlerUpdateLevel -= 1;
-        }
-
-        public void _InternalUpdateHandlers2(int eventIndex)
-        {
-            handlerUpdateLevel += 1;
-            int count = handlerCount[eventIndex];
-            for (int i = 0; i < count; i++)
-            {
-                UdonBehaviour script = (UdonBehaviour)handlers[eventIndex][i];
-                if (!script)
-                {
-                    Debug.LogError($"EventBase [{gameObject.name}:{eventIndex}] registered handler missing or destroyed");
-                    continue;
-                }
-                if (eventDebugLog)
-                    eventDebugLog._Write("  event", $"[{handlerUpdateLevel}] [{gameObject.name}:{eventIndex}] [{i + 1}/{count}] -> {script.gameObject.name}:{handlerEvents[eventIndex][i]}");
-                script.SendCustomEvent(handlerEvents[eventIndex][i]);
-            }
-            handlerUpdateLevel -= 1;
-        }
-
-        [RecursiveMethod]
         protected void _UpdateHandlers(int eventIndex, object arg1)
         {
-            if (handlerCount == null || suppress)
-                return;
-
-            if (eventIndex < 0 || eventIndex >= handlerCount.Length)
-            {
-                Debug.LogError($"GameObject {gameObject.name} tried to trigger out-of-range event {eventIndex}!");
-                return;
-            }
-
-            handlerUpdateLevel += 1;
-            for (int i = 0; i < handlerCount[eventIndex]; i++)
-            {
-                UdonBehaviour script = (UdonBehaviour)handlers[eventIndex][i];
-                string argName = handlerArg1[eventIndex][i];
-                if (argName != null && argName != "")
-                    script.SetProgramVariable(argName, arg1);
-
-                script.SendCustomEvent(handlerEvents[eventIndex][i]);
-            }
-            handlerUpdateLevel -= 1;
+            _InternalUpdateHandlers(eventIndex, arg1, true);
         }
 
-        protected Array _AddElement(Array arr, object elem, Type type)
+        private void _InternalUpdateHandlers(int eventIndex, object arg1, bool hasArg)
         {
-            Array newArr;
-            int count = 0;
+            if (eb_blockingEvents)
+                return;
 
-            if (Utilities.IsValid(arr))
+            if (eventIndex >= eb_eventCount)
             {
-                count = arr.Length;
-                newArr = Array.CreateInstance(type, count + 1);
-                Array.Copy(arr, newArr, count);
+                _EB_DispatchError(eventIndex, 0, ERR_RANGE);
+                return;
             }
-            else
-                newArr = Array.CreateInstance(type, 1);
 
-            newArr.SetValue(elem, count);
-            return newArr;
+            int count = handlerCount[eventIndex];
+            if (count == 0)
+                return;
+
+            if (eb_eventDispatching)
+                _EB_DispatchNested(eventIndex, count, arg1, hasArg);
+            else
+                _EB_DispatchFast(eventIndex, count, arg1, hasArg);
         }
 
-        protected Array _RemoveElement(Array arr, int index, Type type)
+        private void _EB_DispatchFast(int eventIndex, int count, object arg1, bool hasArg)
         {
-            if (index < 0 || index >= arr.Length)
-                return arr;
+            eb_eventDispatching = true;
 
-            Array newArr;
+            Component[] handlerList = handlers[eventIndex];
+            string[] eventList = handlerEvents[eventIndex];
+            string[] argList = null;
+            if (hasArg)
+                argList = handlerArg1[eventIndex];
 
-            if (Utilities.IsValid(arr))
+            for (int i = 0; i < count; i++)
             {
-                int newCount = arr.Length - 1;
-                newArr = Array.CreateInstance(type, newCount);
-                Array.Copy(arr, 0, newArr, 0, index);
-                if (index < newCount)
-                    Array.Copy(arr, index + 1, newArr, index, newCount - index);
-            }
-            else
-                newArr = Array.CreateInstance(type, 0);
+                UdonBehaviour script = (UdonBehaviour)handlerList[i];
+                if (script)
+                {
+                    if (hasArg)
+                    {
+                        string argName = argList[i];
+                        if (argName != "")
+                            script.SetProgramVariable(argName, arg1);
+                    }
 
-            return newArr;
+                    string eventName = eventList[i];
+                    if (eb_useEventDebug)
+                        _EB_DispatchLog(1, eventIndex, i, count, script, eventName);
+
+                    script.SendCustomEvent(eventName);
+                }
+                else
+                    _EB_DispatchError(eventIndex, 1, ERR_HANDLER);
+            }
+
+            eb_eventDispatching = false;
+        }
+
+        private void _EB_DispatchNested(int eventIndex, int count, object arg1, bool hasArg)
+        {
+            int level = eb_handlerUpdateLevel;
+            if (level >= MAX_EVENT_DEPTH)
+            {
+                _EB_DispatchError(eventIndex, level + 1, ERR_DEPTH);
+                return;
+            }
+
+            level += 1;
+            eb_handlerUpdateLevel = level;
+
+            // [RecursiveMethod] did not seem reliable for reentrancy, so we maintain our own local stack
+            eb_depthEvent[level] = eventIndex;
+            eb_depthIndex[level] = 0;
+            eb_depthCount[level] = count;
+            eb_depthHasArg[level] = hasArg;
+
+            if (hasArg)
+                eb_depthArg[level] = arg1;
+
+            while (eb_depthIndex[eb_handlerUpdateLevel] < eb_depthCount[eb_handlerUpdateLevel])
+            {
+                int lvl = eb_handlerUpdateLevel;
+                int e = eb_depthEvent[lvl];
+                int i = eb_depthIndex[lvl];
+
+                eb_depthIndex[lvl] = i + 1;
+
+                UdonBehaviour script = (UdonBehaviour)handlers[e][i];
+                if (script)
+                {
+                    if (eb_depthHasArg[lvl])
+                    {
+                        string argName = handlerArg1[e][i];
+                        if (argName != "")
+                            script.SetProgramVariable(argName, eb_depthArg[lvl]);
+                    }
+
+                    string eventName = handlerEvents[e][i];
+                    if (eb_useEventDebug)
+                        _EB_DispatchLog(lvl + 1, e, i, eb_depthCount[lvl], script, eventName);
+
+                    script.SendCustomEvent(eventName);
+                }
+                else
+                    _EB_DispatchError(e, lvl + 1, ERR_HANDLER);
+            }
+
+            eb_handlerUpdateLevel -= 1;
         }
 
         protected int _FindHandlerIndex(int eventIndex, Component handler, string eventName)
         {
-            int index = -1;
-            for (int i = 0; i < handlerCount[eventIndex]; i++)
+            Component[] handlerList = handlers[eventIndex];
+            string[] eventList = handlerEvents[eventIndex];
+            int count = handlerCount[eventIndex];
+
+            for (int i = 0; i < count; i++)
             {
-                if (handlers[eventIndex][i] == handler && handlerEvents[eventIndex][i] == eventName)
-                {
-                    index = i;
-                    break;
-                }
+                if (handlerList[i] == handler && eventList[i] == eventName)
+                    return i;
             }
 
-            return index;
+            return -1;
+        }
+
+        protected virtual void _RefreshDebugFlags()
+        {
+            useDebug = logProvider;
+            eb_useEventDebug = useDebug && includeEventLogging;
+
+            logChannel = _EB_RegisterLogChannel(null);
+            eb_logEventChannel = _EB_RegisterLogChannel("event");
+        }
+
+        private int _EB_RegisterLogChannel(string suffix)
+        {
+            return useDebug ? logProvider._RegisterChannel(componentNamespace, componentName, null) : -1;
+        }
+
+        private void _EB_DispatchLog(int level, int eventIndex, int index, int count, UdonBehaviour script, string eventName)
+        {
+            logProvider._WriteInfo(eb_logEventChannel, $"[{level}] [{gameObject.name}:{eventIndex}] [{index + 1}/{count}] -> {script.gameObject.name}:{eventName}");
+        }
+
+        private void _EB_DispatchError(int eventIndex, int level, int code)
+        {
+            string detail;
+            if (code == ERR_RANGE)
+                detail = "out-of-range event";
+            else if (code == ERR_DEPTH)
+                detail = "call depth exceeded";
+            else
+                detail = "handler missing or destroyed";
+
+            _EB_EventError($"EventBase [{gameObject.name}:{eventIndex}] [{level}] {detail}");
+        }
+
+        private void _EB_RegistrationError(int eventIndex, Component handler, string eventName, bool registering, bool inUpdate)
+        {
+            string action = registering ? "register" : "unregister";
+            string detail = inUpdate ? " while handler update in progress" : ", out-of-range event index";
+
+            _EB_EventError($"GameObject {gameObject.name} tried to {action} event {eventIndex} from origin {handler.gameObject.name}:{eventName}{detail}!");
+        }
+
+        private void _EB_EventError(string message)
+        {
+            if (useDebug)
+                logProvider._WriteError(eb_logEventChannel, message);
+            else
+                Debug.LogError(message);
         }
     }
 }

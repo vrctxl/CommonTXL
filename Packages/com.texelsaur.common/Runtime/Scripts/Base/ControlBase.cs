@@ -210,7 +210,7 @@ namespace Texel
                 text.text = value;
 
             TextMeshProUGUI tmp = buttonTMP[buttonIndex];
-            if (tmp)
+            if (tmp && tmp.text != value)
                 tmp.text = value;
         }
 

@@ -111,6 +111,19 @@ namespace Texel
             index += 1;
         }
 
+        public void _SetValueContext(string context, string key, string value)
+        {
+            if (keys.Length == index)
+            {
+                keys = (string[])_SizeArray(keys, typeof(string), index + 50);
+                values = (string[])_SizeArray(values, typeof(string), index + 50);
+            }
+
+            keys[index] = $"{context}:{key}";
+            values[index] = value;
+            index += 1;
+        }
+
         public void _End()
         {
             if (keyBuffer.Length != index)
@@ -142,13 +155,13 @@ namespace Texel
         override protected void _OnRegister(int eventIndex, int handlerIndex)
         {
             if (eventIndex == EVENT_UPDATE)
-                handlerContexts = (string[])_AddElement(handlerContexts, $"Source {handlerIndex}", typeof(string));
+                handlerContexts = (string[])UtilityTxl.ArrayAddElement(handlerContexts, $"Source {handlerIndex}", typeof(string));
         }
 
         protected override void _OnUnregister(int eventIndex, int handlerIndex)
         {
             if (eventIndex == EVENT_UPDATE)
-                handlerContexts = (string[])_RemoveElement(handlerContexts, handlerIndex, typeof(string));
+                handlerContexts = (string[])UtilityTxl.ArrayRemoveElement(handlerContexts, handlerIndex, typeof(string));
         }
 
         public void _SetContext(Component handler, string eventName, string context)

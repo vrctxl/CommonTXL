@@ -1,7 +1,27 @@
 # Changelog
 
-## [2.0.1] - 07-19-26
+## [2.1.0] - 08-24-26
+- BREAKING: Event base no longer uses internal DebugLog ref
+- BREAKING: AccessEventBase overrides OnDeserialize(Result), which may conflict with downstream naked OnDeserialize
+- Ensure EVENT_VALIDATE is still called on start (Thanks CompuGeniusCode)
+- Tightened up EventBase
+  - Reduced compiled bytecode overhead of EventBase by ~30%
+  - Reduced event handler extern calls by ~33%
+- Improved base security implementation of AccessEventBase
+  - Options to enforce ownership transfer and ownership reclaimation against ACL object
+  - Option to strict enforce data sync from trusted source, if supported by underlying class
+    - ONLY use this if you know what you're doing.  Will lead to clients desyncing in common case
+- EventBase exposes public DebugLogProvider field for use in full class hierarchy
+- EventBase and AccessEventBase expose field to opt into logging
+- Moved some debug logging support into base DebugLogProvider class
+  - Includes VRC logging option
+  - Includes min debug level option
+- Improved DebugLog performance
+  - Skip most work if log is disabled in hierarchy
+- Added context support to DebugState
+- Added ArraySetSize and ArrayMaxSize utility methods
 
+## [2.0.1] - 07-19-26
 - Fixed regression in ControlBase causing script compile errors
 
 ## [2.0.0] - 07-19-26
