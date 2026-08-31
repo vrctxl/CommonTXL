@@ -20,6 +20,8 @@ namespace Texel
 
         [SerializeField] protected internal bool includeAccessLogging;
 
+        protected bool hasAccessControl = false;
+
         private bool ae_reclaimQueued = false;
         private bool ae_useAccessDebug = false;
         private bool ae_bypassAccessCheck = false;
@@ -62,7 +64,8 @@ namespace Texel
         {
             base._RefreshDebugFlags();
 
-            ae_bypassAccessCheck = !accessControl;
+            hasAccessControl = accessControl;
+            ae_bypassAccessCheck = !hasAccessControl;
             ae_bypassOwnershipCheck = ae_bypassAccessCheck || !enforceOwnershipTransfer;
 
             if (useDebug)
@@ -78,7 +81,7 @@ namespace Texel
             if (ae_bypassOwnershipCheck)
                 return true;
 
-            bool requesteeCheck = accessControl._HasAccess(requestedOwner);
+            bool requesteeCheck = _AccessCheck(requestedOwner);
 
             if (ae_useAccessDebug) logProvider._WriteInfo(ae_logAccessChannel, $"Ownership check: requestee={requesteeCheck}");
 
@@ -88,15 +91,20 @@ namespace Texel
         public override void OnOwnershipTransferred(VRCPlayerApi player)
         {
             if (ae_useAccessDebug)
-            {
-                string name = Utilities.IsValid(player) ? player.displayName : "";
-                logProvider._WriteInfo(ae_logAccessChannel, $"Ownership transferred to {name}");
-            }
+                logProvider._WriteInfo(ae_logAccessChannel, $"Ownership transferred to {_AE_PlayerNameId(player)}");
 
             _OnOwnerChanged();
 
             if (reclaimOwnership && !ae_bypassAccessCheck && !_OwnerHasAccess())
                 _AE_ScheduleReclaim();
+        }
+
+        private string _AE_PlayerNameId(VRCPlayerApi player)
+        {
+            if (!Utilities.IsValid(player))
+                return "--";
+
+            return player.displayName + ":" + player.playerId;
         }
 
         protected virtual void _OnOwnerChanged() { }
@@ -139,7 +147,7 @@ namespace Texel
             if (ae_useAccessDebug)
             {
                 VRCPlayerApi player = Networking.GetOwner(gameObject);
-                logProvider._WriteInfo(ae_logAccessChannel, $"Reclaiming ownership from {(player != null ? player.displayName : "--")}");
+                logProvider._WriteInfo(ae_logAccessChannel, $"Reclaiming ownership from {_AE_PlayerNameId(player)}");
             }
 
             Networking.SetOwner(Networking.LocalPlayer, gameObject);
@@ -173,14 +181,7 @@ namespace Texel
 
         protected bool _OwnerHasAccess()
         {
-            if (ae_bypassAccessCheck)
-                return true;
-
-            VRCPlayerApi owner = Networking.GetOwner(gameObject);
-            if (!Utilities.IsValid(owner))
-                return false;
-
-            return accessControl._HasAccess(owner);
+            return _AccessCheck(Networking.GetOwner(gameObject));
         }
 
         public override void OnDeserialization(DeserializationResult result)
@@ -191,27 +192,35 @@ namespace Texel
             {
                 _CaptureSyncShadow();
                 ae_shadowValid = true;
-                _OnSyncApplied(result, true);
+                _OnSyncApplied(result);
 
                 return;
             }
+
+            _RestoreSyncShadow();
 
             if (ae_shadowValid)
-            {
-                _RestoreSyncShadow();
-                _OnSyncApplied(result, false);
+                _OnSyncReverted(result);
+            else
+                _OnSyncBlocked(result);
+        }
 
+        public override void OnPostSerialization(SerializationResult result)
+        {
+            if (!result.success)
+            {
+                if (ae_useAccessDebug) logProvider._WriteWarning(ae_logAccessChannel, "Failed to sync");
                 return;
             }
-
-            _OnSyncBlocked(result);
         }
 
         protected virtual void _CaptureSyncShadow() { }
 
         protected virtual void _RestoreSyncShadow() { }
 
-        protected virtual void _OnSyncApplied(DeserializationResult result, bool trusted) { }
+        protected virtual void _OnSyncApplied(DeserializationResult result) { }
+
+        protected virtual void _OnSyncReverted(DeserializationResult result) { }
 
         protected virtual void _OnSyncBlocked(DeserializationResult result) { }
 

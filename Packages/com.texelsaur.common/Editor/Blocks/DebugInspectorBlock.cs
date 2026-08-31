@@ -42,7 +42,7 @@ namespace Texel
 
             eventLogging = so.FindProperty(eventLoggingField);
 
-            labelSection = new GUIContent("Debug Options");
+            labelSection = new GUIContent("Logging & Debug");
             labelLogProvider = new GUIContent("Debug Log", "Destination for debug output from this component.");
             labelLogProviderAdd = new GUIContent("+", "Create new Debug Log");
             labelEventLogging = new GUIContent("Include Events", "Log event dispatch traffic from this component.  Verbose.");
@@ -73,9 +73,13 @@ namespace Texel
             if (!Valid)
                 return false;
 
+            EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
+
             expanded = EditorGUILayout.Foldout(expanded, labelSection, true, foldoutStyle);
             if (!expanded)
                 return false;
+
+            EditorGUILayout.Space();
 
             bool add = TXLGUI.DrawObjectFieldWithAdd(logProvider, labelLogProvider, labelLogProviderAdd);
             bool hasProvider = HasProvider;

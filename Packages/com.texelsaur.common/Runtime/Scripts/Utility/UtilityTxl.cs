@@ -67,8 +67,8 @@ namespace Texel
                     return arr;
 
                 Array newArr = Array.CreateInstance(type, size);
-                Array.Copy(arr, newArr, size);
-                return arr;
+                Array.Copy(arr, newArr, Mathf.Min(count, size));
+                return newArr;
             }
 
             return arr;

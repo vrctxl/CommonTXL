@@ -12,7 +12,6 @@ namespace Texel
 {
     public abstract class EventBase : UdonSharpBehaviour
     {
-        [Header("Debug")]
         [SerializeField] protected internal DebugLogProvider logProvider;
         [SerializeField] protected internal bool includeEventLogging = false;
 

@@ -15,6 +15,7 @@ namespace Texel
         Validation = 1 << 3,
 
         Synced = ObjectField | Ownership | SyncGate | Validation,
+        SyncedUngated = ObjectField | Ownership | Validation,
         Unsynced = ObjectField | Validation,
 
         All = ~0
@@ -88,7 +89,7 @@ namespace Texel
             debug.AddRow(accessLogging, labelAccessLogging, Valid, indent: 1);
         }
 
-        public bool DrawSection(GUIStyle foldoutStyle)
+        public bool Draw(GUIStyle foldoutStyle)
         {
             if (!Valid)
                 return false;
