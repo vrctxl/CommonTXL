@@ -5,7 +5,6 @@ using UdonSharpEditor;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
-using VRC.SDKBase;
 using VRC.Udon;
 
 #if UNITY_2019

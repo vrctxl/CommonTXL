@@ -1,6 +1,5 @@
-using System;
+
 using System.Linq;
-using UdonSharpEditor;
 using UnityEditor;
 
 namespace Texel

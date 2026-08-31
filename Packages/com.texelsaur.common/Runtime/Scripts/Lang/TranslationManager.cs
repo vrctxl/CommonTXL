@@ -1,5 +1,4 @@
 ﻿
-using System;
 using UdonSharp;
 using UnityEngine;
 using UnityEngine.UI;

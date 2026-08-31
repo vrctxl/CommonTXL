@@ -3,14 +3,14 @@ using UnityEditor;
 
 namespace Texel
 {
-    [CustomEditor(typeof(EventBase), true)]
+    [CustomEditor(typeof(DebugEventBase), true)]
     internal class EventBaseInspector : Editor
     {
         DebugInspectorBlock debugBlock;
         string[] excludedPropCache = new string[0];
 
         static readonly string[] excludedEvent = {
-            "m_Script", "logProvider", "includeEventLogging"
+            "m_Script", "logProvider", "includeEventLogging", "debugState"
         };
 
         void OnEnable()
