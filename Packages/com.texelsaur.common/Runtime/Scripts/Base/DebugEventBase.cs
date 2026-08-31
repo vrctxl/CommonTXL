@@ -12,6 +12,9 @@ namespace Texel
         [SerializeField] protected internal bool includeEventLogging = false;
         [SerializeField] protected internal DebugState debugState;
 
+        protected string componentName = "";
+        protected string componentNamespace = "CommonTXL";
+
         protected int logChannel = -1;
         int de_logEventChannel = -1;
 
@@ -49,6 +52,14 @@ namespace Texel
             }
         }
 
+        public virtual void _SetComponentName(string componentName, string componentNamespace)
+        {
+            this.componentName = componentName;
+            this.componentNamespace = componentNamespace;
+
+            _RefreshDebugFlags();
+        }
+
         protected virtual void _RefreshDebugFlags()
         {
             bool useDebug = logProvider;
@@ -57,12 +68,12 @@ namespace Texel
             logChannel = _RegisterLogChannel(null);
             de_logEventChannel = _RegisterLogChannel("event");
 
-            DebugLogLevel level = useDebug ? logProvider.MinLogLevel : DebugLogLevel.Info;
-            _usingError = useDebug && level <= DebugLogLevel.Error;
-            _usingWarning = useDebug && level <= DebugLogLevel.Warning;
-            _usingDebug = useDebug && level <= DebugLogLevel.Info;
-            _usingVerbose = useDebug && level <= DebugLogLevel.Verbose;
-            _usingTrace = useDebug && level <= DebugLogLevel.Trace;
+            int level = (int)(useDebug ? logProvider.MinLogLevel : DebugLogLevel.Info);
+            _usingError = useDebug && (level <= (int)DebugLogLevel.Error);
+            _usingWarning = useDebug && (level <= (int)DebugLogLevel.Warning);
+            _usingDebug = useDebug && (level <= (int)DebugLogLevel.Info);
+            _usingVerbose = useDebug && (level <= (int)DebugLogLevel.Verbose);
+            _usingTrace = useDebug && (level <= (int)DebugLogLevel.Trace);
         }
 
         protected int _RegisterLogChannel(string suffix)
@@ -71,13 +82,6 @@ namespace Texel
                 return -1;
 
             return logProvider._RegisterChannel(componentNamespace, componentName, suffix);
-        }
-
-        public override void _SetComponentName(string componentName, string componentNamespace)
-        {
-            base._SetComponentName(componentName, componentNamespace);
-
-            _RefreshDebugFlags();
         }
 
         protected override void _EventLogInfo(string message)

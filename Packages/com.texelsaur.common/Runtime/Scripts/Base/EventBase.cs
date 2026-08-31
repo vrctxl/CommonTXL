@@ -15,9 +15,6 @@ namespace Texel
         [Obsolete("Use LogProvider from DebugEventBase or override log virtuals")]
         [HideInInspector] protected DebugLog eventDebugLog;
 
-        protected string componentName = "";
-        protected string componentNamespace = "CommonTXL";
-
         protected int[] handlerCount;
         protected Component[][] handlers;
         protected string[][] handlerEvents;
@@ -103,12 +100,6 @@ namespace Texel
                 eb_eventSuppress = value;
                 eb_blockingEvents = value || !eb_handlersInit;
             }
-        }
-
-        public virtual void _SetComponentName(string componentName, string componentNamespace)
-        {
-            this.componentName = componentName;
-            this.componentNamespace = componentNamespace;
         }
 
         protected void _InitHandlers()
