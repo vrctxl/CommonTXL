@@ -10,7 +10,7 @@ using VRC.Udon.Common;
 
 namespace Texel
 {
-    public abstract class AccessEventBase : EventBase
+    public abstract class AccessEventBase : DebugEventBase
     {
         [Header("Access Control")]
         [SerializeField] protected internal AccessControl accessControl;
@@ -68,12 +68,12 @@ namespace Texel
             ae_bypassAccessCheck = !hasAccessControl;
             ae_bypassOwnershipCheck = ae_bypassAccessCheck || !enforceOwnershipTransfer;
 
-            if (useDebug)
+            if (logProvider)
                 ae_logAccessChannel = logProvider._RegisterChannel(componentNamespace, componentName, "access");
             else
                 ae_logAccessChannel = -1;
 
-            ae_useAccessDebug = useDebug && includeAccessLogging;
+            ae_useAccessDebug = logProvider && includeAccessLogging;
         }
 
         public override bool OnOwnershipRequest(VRCPlayerApi requestingPlayer, VRCPlayerApi requestedOwner)

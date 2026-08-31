@@ -12,11 +12,8 @@ namespace Texel
 {
     public abstract class EventBase : UdonSharpBehaviour
     {
-        [SerializeField] protected internal DebugLogProvider logProvider;
-        [SerializeField] protected internal bool includeEventLogging = false;
-
-        [Obsolete("Use logProvider")]
-        protected DebugLog eventDebugLog;
+        [Obsolete("Use LogProvider from DebugEventBase or override log virtuals")]
+        [HideInInspector] protected DebugLog eventDebugLog;
 
         protected string componentName = "";
         protected string componentNamespace = "CommonTXL";
@@ -49,11 +46,7 @@ namespace Texel
         int eb_handlerUpdateLevel = 0;
         int eb_eventCount = 0;
 
-        bool eb_useEventDebug;
-        int eb_logEventChannel = -1;
-
-        protected bool useDebug;
-        protected int logChannel = -1;
+        protected bool eb_useEventDebug;
 
         protected virtual int EventCount
         {
@@ -68,7 +61,7 @@ namespace Texel
             eb_eventInit = true;
 
             _PreInit();
-            _RefreshDebugFlags();
+            _OnInitDebug();
             _InitHandlers();
             _Init();
 
@@ -78,6 +71,8 @@ namespace Texel
         }
 
         protected virtual void _PreInit() { }
+
+        protected virtual void _OnInitDebug() { }
 
         protected virtual void _Init() { }
 
@@ -110,32 +105,10 @@ namespace Texel
             }
         }
 
-        public void _SetComponentName(string componentName, string componentNamespace)
+        public virtual void _SetComponentName(string componentName, string componentNamespace)
         {
             this.componentName = componentName;
             this.componentNamespace = componentNamespace;
-
-            _RefreshDebugFlags();
-        }
-
-        public virtual DebugLogProvider LogProvider
-        {
-            get { return logProvider; }
-            set
-            {
-                logProvider = value;
-                _RefreshDebugFlags();
-            }
-        }
-
-        public bool EventLogging
-        {
-            get { return includeEventLogging; }
-            set
-            {
-                includeEventLogging = value;
-                _RefreshDebugFlags();
-            }
         }
 
         protected void _InitHandlers()
@@ -370,23 +343,16 @@ namespace Texel
             return -1;
         }
 
-        protected virtual void _RefreshDebugFlags()
-        {
-            useDebug = logProvider;
-            eb_useEventDebug = useDebug && includeEventLogging;
+        protected virtual void _EventLogInfo(string message) { }
 
-            logChannel = _EB_RegisterLogChannel(null);
-            eb_logEventChannel = _EB_RegisterLogChannel("event");
-        }
-
-        private int _EB_RegisterLogChannel(string suffix)
+        protected virtual void _EventLogError(string message)
         {
-            return useDebug ? logProvider._RegisterChannel(componentNamespace, componentName, null) : -1;
+            Debug.LogError(message);
         }
 
         private void _EB_DispatchLog(int level, int eventIndex, int index, int count, UdonBehaviour script, string eventName)
         {
-            logProvider._WriteInfo(eb_logEventChannel, $"[{level}] [{gameObject.name}:{eventIndex}] [{index + 1}/{count}] -> {script.gameObject.name}:{eventName}");
+            _EventLogInfo($"[{level}] [{gameObject.name}:{eventIndex}] [{index + 1}/{count}] -> {script.gameObject.name}:{eventName}");
         }
 
         private void _EB_DispatchError(int eventIndex, int level, int code)
@@ -399,7 +365,7 @@ namespace Texel
             else
                 detail = "handler missing or destroyed";
 
-            _EB_EventError($"EventBase [{gameObject.name}:{eventIndex}] [{level}] {detail}");
+            _EventLogError($"EventBase [{gameObject.name}:{eventIndex}] [{level}] {detail}");
         }
 
         private void _EB_RegistrationError(int eventIndex, Component handler, string eventName, bool registering, bool inUpdate)
@@ -407,15 +373,7 @@ namespace Texel
             string action = registering ? "register" : "unregister";
             string detail = inUpdate ? " while handler update in progress" : ", out-of-range event index";
 
-            _EB_EventError($"GameObject {gameObject.name} tried to {action} event {eventIndex} from origin {handler.gameObject.name}:{eventName}{detail}!");
-        }
-
-        private void _EB_EventError(string message)
-        {
-            if (useDebug)
-                logProvider._WriteError(eb_logEventChannel, message);
-            else
-                Debug.LogError(message);
+            _EventLogError($"GameObject {gameObject.name} tried to {action} event {eventIndex} from origin {handler.gameObject.name}:{eventName}{detail}!");
         }
     }
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Security.Cryptography;
 using UnityEditor;
 using UnityEngine;
 
@@ -42,6 +43,9 @@ namespace Texel
         readonly GUIContent labelGate;
         readonly GUIContent labelAccessLogging;
 
+        readonly SerializedObject serializedObject;
+        readonly UnityEngine.Object target;
+
         public bool Valid { get; private set; }
 
         public bool HasAccessControl
@@ -51,6 +55,9 @@ namespace Texel
 
         public AccessInspectorBlock(SerializedObject so, AccessBlockOptions options, string accessControlField = "accessControl", string accessLoggingField = "includeAccessLogging")
         {
+            serializedObject = so;
+            target = so.targetObject;
+
             this.options = options;
 
             accessControl = so.FindProperty(accessControlField);
@@ -89,31 +96,28 @@ namespace Texel
             debug.AddRow(accessLogging, labelAccessLogging, Valid, indent: 1);
         }
 
-        public bool Draw(GUIStyle foldoutStyle)
+        public void Draw(GUIStyle foldoutStyle)
         {
             if (!Valid)
-                return false;
+                return;
 
             EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
 
             expanded = EditorGUILayout.Foldout(expanded, labelSection, true, foldoutStyle);
             if (!expanded)
-                return false;
+                return;
 
-            bool add = DrawObjectField();
+            DrawObjectField();
             DrawOptions();
-
-            return add;
         }
 
-        public bool DrawObjectField()
+        public void DrawObjectField()
         {
             if (!Valid || (options & AccessBlockOptions.ObjectField) == 0)
-                return false;
+                return;
 
-            bool add = TXLGUI.DrawObjectFieldWithAdd(accessControl, labelAccessControl, labelAccessControlAdd);
-
-            return add;
+            if (TXLGUI.DrawObjectFieldWithAdd(accessControl, labelAccessControl, labelAccessControlAdd))
+                _CreateAccessControl();
         }
 
         public void DrawOptions()
@@ -148,6 +152,17 @@ namespace Texel
                 EditorGUILayout.HelpBox(
                     "Synced state validation is enabled.  This will prevent state from being synced by unauthorized users, but will lead to client desync if no authorized users are present.  Use with caution.",
                     MessageType.Warning);
+        }
+
+        void _CreateAccessControl()
+        {
+            AccessControl created = CommonMenu.AddAccessControlForComponent(target);
+            if (!created)
+                return;
+
+            serializedObject.Update();
+            accessControl.objectReferenceValue = created;
+            serializedObject.ApplyModifiedProperties();
         }
     }
 }

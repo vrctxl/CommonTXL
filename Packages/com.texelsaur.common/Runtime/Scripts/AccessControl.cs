@@ -8,13 +8,8 @@ namespace Texel
 {
     [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
     [DefaultExecutionOrder(-1)]
-    public class AccessControl : EventBase
+    public class AccessControl : DebugEventBase
     {
-        //[Header("Optional Components")]
-        //[Tooltip("Log debug statements to a world object")]
-        //public DebugLog debugLog;
-        public DebugState debugState;
-
         [Header("Access Options")]
         public bool allowInstanceOwner = true;
         public bool allowMaster = true;
@@ -29,8 +24,6 @@ namespace Texel
         public bool enforce = true;
         [Tooltip("Whether to respond to player join and leave events.  If disabled, master and owner rules may not work correctly.\n\nEvents are automatically ignored if rule configuration does not need them.")]
         public bool handleJoinLeaveEvents = true;
-        [Tooltip("Write out debug info to VRChat log")]
-        public bool debugLogging = false;
 
         [Header("Access Whitelist")]
         [Tooltip("A list of admin users who have access when allow whitelist is enabled")]
@@ -46,8 +39,6 @@ namespace Texel
         private string syncFirstJoin = "";
         [UdonSynced]
         private int syncFirstJoinId = -1;
-
-        bool _usingDebug = false;
 
         bool _localPlayerWhitelisted = false;
         bool _localPlayerMaster = false;
@@ -76,6 +67,10 @@ namespace Texel
 
         protected override void _Init()
         {
+            base._Init();
+
+            _SetComponentName("AccessControl", "CommonTXL");
+
             VRCPlayerApi player = Networking.LocalPlayer;
             if (Utilities.IsValid(player))
             {
@@ -99,12 +94,6 @@ namespace Texel
                 else if (syncFirstJoin == player.displayName)
                     _localPlayerFirstJoin = true;
                 
-            }
-
-            if (Utilities.IsValid(debugState))
-            {
-                debugState._Register(DebugState.EVENT_UPDATE, this, nameof(_UpdateDebugState));
-                debugState._SetContext(this, nameof(_UpdateDebugState), "AccessControl");
             }
 
             if (_usingDebug)
@@ -147,13 +136,6 @@ namespace Texel
         protected override void _PostInit()
         {
             _UpdateHandlers(EVENT_VALIDATE);
-        }
-
-        protected override void _RefreshDebugFlags()
-        {
-            base._RefreshDebugFlags();
-
-            _usingDebug = useDebug && logProvider.MinLogLevel <= DebugLogLevel.Info;
         }
 
         [Obsolete("Use Networking.InstanceOwner")]
@@ -462,13 +444,9 @@ namespace Texel
             }
         }
 
-        void _DebugLog(string message)
-        {
-            if (_usingDebug)
-                logProvider._WriteInfo(logChannel, message);
-        }
+        public override bool UsesDebugState => true;
 
-        public void _UpdateDebugState()
+        protected override void _UpdateDebugState()
         {
             debugState._SetValue("localMaster", _localPlayerMaster.ToString());
             debugState._SetValue("localInstanceOwner", _localPlayerInstanceOwner.ToString());
