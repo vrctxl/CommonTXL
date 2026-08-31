@@ -82,7 +82,7 @@ namespace Texel
             labelAccessControlAdd = new GUIContent("+", "Create new Access Control");
             labelEnforce = new GUIContent("Enforce Ownership Transfer", "Reject ownership transfers to players without access.  Cannot prevent all cases of objects being transfered to non-authorized players.");
             labelReclaim = new GUIContent("Reclaim Unauthorized Ownership", "When an unauthorized player becomes owner, an authorized player attempts to take ownership back and republishes known-good state.");
-            labelGate = new GUIContent("Validate Synced State", "Revert synced state received from an unauthorized owner to the last known-good snapshot.  Will likely lead to client desync.  Use with caution.");
+            labelGate = new GUIContent("Strict Authorized Sync", "Revert synced state received from an unauthorized owner to the last known-good snapshot.  Will likely lead to client desync.  Use with caution.");
 
             labelAccessLogging = new GUIContent("Include Access", "Include access decisions and ownership changes in the debug log.");
         }
