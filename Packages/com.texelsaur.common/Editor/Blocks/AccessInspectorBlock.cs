@@ -47,9 +47,17 @@ namespace Texel
 
         public bool Valid { get; private set; }
 
+        public bool SupportsStrictSync { get; private set; }
+
         public bool HasAccessControl
         {
             get { return Valid && accessControl.objectReferenceValue != null; }
+        }
+
+        static bool _TypeSupportsStrictSync(UnityEngine.Object target)
+        {
+            AccessEventBase behaviour = target as AccessEventBase;
+            return behaviour != null && behaviour.SupportsStrictSync;
         }
 
         public AccessInspectorBlock(SerializedObject so, AccessBlockOptions options, string accessControlField = "accessControl", string accessLoggingField = "includeAccessLogging")
@@ -70,7 +78,9 @@ namespace Texel
                 reclaimOwnership = so.FindProperty("reclaimOwnership");
             }
 
-            if ((options & AccessBlockOptions.SyncGate) != 0)
+            SupportsStrictSync = _TypeSupportsStrictSync(so.targetObject);
+
+            if (SupportsStrictSync)
                 syncGateEnabled = so.FindProperty("syncGateEnabled");
 
             if (accessLoggingField != null)

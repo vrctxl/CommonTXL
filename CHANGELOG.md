@@ -1,6 +1,13 @@
 # Changelog
 
-## [2.1.0] - 08-24-26
+## [2.1.1] - 09-01-26
+- Objects supporting strict sync must declare it via virtual SupportsStrictSync override
+- Debug state override renamed SupportsDebugState
+- LogProvider in DebugEventBase is no longer virtual
+- Added _SetLogProvider to DebugEventBase
+- Log functions in DebugEventBase are now virtual
+
+## [2.1.0] - 08-31-26
 - BREAKING: Event base no longer uses internal DebugLog ref
 - BREAKING: AccessEventBase overrides OnDeserialize(Result), which may conflict with downstream naked OnDeserialize
 - Ensure EVENT_VALIDATE is still called on start (Thanks CompuGeniusCode)

@@ -444,7 +444,7 @@ namespace Texel
             }
         }
 
-        public override bool UsesDebugState => true;
+        public override bool SupportsDebugState => true;
 
         protected override void _UpdateDebugState()
         {

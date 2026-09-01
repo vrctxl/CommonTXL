@@ -84,7 +84,7 @@ namespace Texel
         static bool _TypeUsesDebugState(UnityEngine.Object target)
         {
             DebugEventBase behaviour = target as DebugEventBase;
-            return behaviour != null && behaviour.UsesDebugState;
+            return behaviour != null && behaviour.SupportsDebugState;
         }
 
         public void AddRow(SerializedProperty property, GUIContent label, bool valid = true, int indent = 0, bool needsProvider = true)

@@ -269,5 +269,10 @@ namespace Texel
         {
             get { return accessControl; }
         }
+
+        public virtual bool SupportsStrictSync
+        {
+            get { return false; }
+        }
     }
 }

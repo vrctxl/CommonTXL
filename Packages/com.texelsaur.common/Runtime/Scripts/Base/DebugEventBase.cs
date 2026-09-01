@@ -28,11 +28,11 @@ namespace Texel
         {
             _RefreshDebugFlags();
 
-            if (UsesDebugState && debugState)
+            if (SupportsDebugState && debugState)
                 DebugState = debugState;
         }
 
-        public virtual DebugLogProvider LogProvider
+        public DebugLogProvider LogProvider
         {
             get { return logProvider; }
             set
@@ -40,6 +40,11 @@ namespace Texel
                 logProvider = value;
                 _RefreshDebugFlags();
             }
+        }
+
+        public virtual void _SetLogProvider(DebugLogProvider provider)
+        {
+            LogProvider = provider;
         }
 
         public bool EventLogging
@@ -97,19 +102,19 @@ namespace Texel
                 Debug.LogError(message);
         }
 
-        protected void _DebugLog(string message)
+        protected virtual void _DebugLog(string message)
         {
             if (_usingDebug)
                 logProvider._WriteInfo(logChannel, message);
         }
 
-        protected void _DebugWarning(string message)
+        protected virtual void _DebugWarning(string message)
         {
             if (_usingWarning)
                 logProvider._WriteWarning(logChannel, message);
         }
 
-        protected void _DebugError(string message)
+        protected virtual void _DebugError(string message)
         {
             if (_usingError)
                 logProvider._WriteError(logChannel, message);
@@ -117,19 +122,19 @@ namespace Texel
                 Debug.LogError(message);
         }
 
-        protected void _DebugVerbose(string message)
+        protected virtual void _DebugVerbose(string message)
         {
             if (_usingVerbose)
                 logProvider._WriteVerbose(logChannel, message);
         }
 
-        protected void _DebugTrace(string message)
+        protected virtual void _DebugTrace(string message)
         {
             if (_usingTrace)
                 logProvider._WriteTrace(logChannel, message);
         }
 
-        public virtual bool UsesDebugState 
+        public virtual bool SupportsDebugState 
         {
             get { return false; }
         }
